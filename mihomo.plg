@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name      "easy-mihomo">
 <!ENTITY author    "bigv">
-<!ENTITY version   "1.2.1">
+<!ENTITY version   "1.2.2">
 <!ENTITY launch    "Settings/EasyMihomo.Main">
 <!ENTITY sourceDir "/boot/config/plugins/easy-mihomo">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/wlaosj/easy-mihomo/refs/heads/main/mihomo.plg">
@@ -14,6 +14,12 @@
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" min="6.12.0" support="https://t.me/+7jcTMePlNVwwZjg1" icon="icon-network">
 
 <CHANGES>
+1.2.2  布局与配置编辑优化
+- 新增：右侧栏新增订阅流量与额度卡片，实时展现已用、总额度、剩余、进度条及过期时间
+- 新增：自研轻量级 YAML 语法高亮代码编辑器（支持行号、YAML 配色高亮、Tab 缩进 2 空格，内网离线可用）
+- 优化：全局控制中心宽度适配最大 1280px 并自动水平居中，提升超宽屏视觉体验
+- 优化：移除右上角非必要的作息时间，使界面排版更加清爽专业
+
 1.2.1  修复与优化
 - 修复：仪表板 CSS 作用域隔离，避免影响其他组件宽度
 - 修复：语言切换按钮默认状态文字不可见
@@ -490,6 +496,15 @@ define('LANG_STRINGS', [
   'close'           => ['cn' => '关闭',       'en' => 'Close'],
   'refresh_log'     => ['cn' => '刷新日志',   'en' => 'Refresh'],
   'clear_log'       => ['cn' => '清空日志',   'en' => 'Clear'],
+  // Redesigned dashboard language strings
+  'subscription_traffic' => ['cn' => '订阅集流量额度', 'en' => 'Subscription Traffic'],
+  'traffic_used' => ['cn' => '已用', 'en' => 'Used'],
+  'traffic_total' => ['cn' => '总额', 'en' => 'Total'],
+  'traffic_remaining' => ['cn' => '剩余', 'en' => 'Remaining'],
+  'expire_time' => ['cn' => '过期时间', 'en' => 'Expiration'],
+  'service_status' => ['cn' => '运行状态与服务控制', 'en' => 'Service Status & Control'],
+  'logs_viewer' => ['cn' => '日志审计与清理', 'en' => 'Log Audit & Clean'],
+  'dash_ui_title' => ['cn' => '控制面板 (Dashboard UI)', 'en' => 'Dashboard UI'],
 ]);
 
 /**
@@ -856,70 +871,81 @@ if (!$binUdiskExists) {
   $installStatus = '<div class="success">' . t('info_no_config') . '</div>';
 }
 ?>
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8" />
-<title>Easy-Mihomo</title>
 <style>
 :root {
-  --bg: #f5f5f5;
-  --bg-card: #ffffff;
-  --bg-card-hover: #fafafa;
-  --border: #dddddd;
-  --text: #333333;
-  --text-dim: #777777;
-  --text-bright: #333333;
-  --accent: #e67e22;
-  --accent-hover: #d35400;
-  --accent-light: rgba(230,126,34,0.1);
-  --green: #27ae60;
-  --green-light: rgba(39,174,96,0.1);
-  --red: #e74c3c;
-  --red-light: rgba(231,76,60,0.1);
-  --yellow: #f39c12;
-  --yellow-light: rgba(243,156,18,0.1);
-  --blue: #3498db;
-  --radius: 12px;
-  --radius-sm: 8px;
-  --shadow: 0 1px 4px rgba(0,0,0,0.06);
+  --mih-bg: #f5f5f5;
+  --mih-bg-card: #ffffff;
+  --mih-bg-card-hover: #fafafa;
+  --mih-border: #dddddd;
+  --mih-text: #333333;
+  --mih-text-dim: #777777;
+  --mih-text-bright: #333333;
+  --mih-accent: #e67e22;
+  --mih-accent-hover: #d35400;
+  --mih-accent-light: rgba(230,126,34,0.1);
+  --mih-green: #27ae60;
+  --mih-green-light: rgba(39,174,96,0.1);
+  --mih-red: #e74c3c;
+  --mih-red-light: rgba(231,76,60,0.1);
+  --mih-yellow: #f39c12;
+  --mih-yellow-light: rgba(243,156,18,0.1);
+  --mih-blue: #3498db;
+  --mih-radius: 12px;
+  --mih-radius-sm: 8px;
+  --mih-shadow: 0 1px 4px rgba(0,0,0,0.06);
 }
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body {
+
+/* Scoped under #easy-mihomo-settings to avoid polluting Unraid */
+#easy-mihomo-settings {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  padding: 24px;
+  color: var(--mih-text);
   line-height: 1.5;
+  padding: 10px 0 30px 0;
+  max-width: 1280px;
+  margin: 0 auto;
+  width: 100%;
 }
-a { color: var(--accent); text-decoration: none; }
-a:hover { color: var(--accent-hover); text-decoration: underline; }
+
+#easy-mihomo-settings * {
+  box-sizing: border-box;
+}
+
+#easy-mihomo-settings a {
+  color: var(--mih-accent);
+  text-decoration: none;
+}
+
+#easy-mihomo-settings a:hover {
+  color: var(--mih-accent-hover);
+  text-decoration: underline;
+}
 
 /* 头部 */
-.header {
+#easy-mihomo-settings .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   flex-wrap: wrap;
   gap: 12px;
 }
-.header h1 {
+#easy-mihomo-settings .header h1 {
   font-size: 24px;
   font-weight: 700;
-  color: var(--text);
+  color: var(--mih-text);
   display: flex;
   align-items: center;
   gap: 10px;
 }
-.header h1 .icon { font-size: 28px; }
-.header-links {
+#easy-mihomo-settings .header h1 .icon { font-size: 28px; }
+#easy-mihomo-settings .header-links {
   display: flex;
   gap: 8px;
   align-items: center;
   flex-wrap: wrap;
 }
-.header-links a, .header-links span {
+#easy-mihomo-settings .header-links a, 
+#easy-mihomo-settings .header-links span {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -931,183 +957,264 @@ a:hover { color: var(--accent-hover); text-decoration: underline; }
   text-decoration: none;
   transition: opacity 0.2s;
 }
-.header-links a:hover { opacity: 0.85; text-decoration: none; }
-.link-tg { background: #0088cc; }
-.link-github { background: #24292e; }
-.link-hot {
-  background: linear-gradient(135deg, #e74c3c, #f39c12);
-  animation: pulse 2s ease-in-out infinite;
-}
-.author-info { color: var(--text-dim); font-size: 12px; padding: 0; background: none; }
-@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.7; } }
+#easy-mihomo-settings .header-links a:hover { opacity: 0.85; text-decoration: none; }
+#easy-mihomo-settings .link-tg { background: #0088cc; }
+#easy-mihomo-settings .link-github { background: #24292e; }
 
-/* 状态横幅 */
-.status-banner {
-  background: linear-gradient(135deg, #e74c3c, #f39c12);
-  border-radius: var(--radius);
-  padding: 20px 24px;
-  margin-bottom: 20px;
+/* 紧凑型 Dashboard 双栏布局 */
+#easy-mihomo-settings .dashboard-layout {
   display: flex;
-  align-items: center;
-  gap: 16px;
-  box-shadow: 0 4px 12px rgba(230,126,34,0.25);
-}
-.status-dot {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  background: white;
-}
-.status-dot.running { box-shadow: 0 0 12px rgba(255,255,255,0.6); }
-.status-dot.stopped { opacity: 0.6; }
-.status-text { font-size: 18px; font-weight: 700; color: white; }
-.status-pid { font-size: 13px; color: rgba(255,255,255,0.8); margin-left: 8px; }
-
-/* 卡片网格 */
-.grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
   gap: 20px;
-  margin-bottom: 20px;
+  align-items: flex-start;
+  margin-top: 16px;
 }
-@media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
-.card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 20px;
-  box-shadow: var(--shadow);
+@media (max-width: 900px) {
+  #easy-mihomo-settings .dashboard-layout {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+#easy-mihomo-settings .layout-left {
+  flex: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 330px;
+}
+#easy-mihomo-settings .layout-right {
+  flex: 6;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+#easy-mihomo-settings .card {
+  background: var(--mih-bg-card);
+  border: 1px solid var(--mih-border);
+  border-radius: var(--mih-radius);
+  padding: 16px;
+  box-shadow: var(--mih-shadow);
   transition: border-color 0.2s;
 }
-.card:hover { border-color: var(--accent); }
-.card-title {
+#easy-mihomo-settings .card:hover { border-color: var(--mih-accent); }
+#easy-mihomo-settings .card-title {
   font-size: 15px;
   font-weight: 700;
-  color: var(--text);
-  margin-bottom: 14px;
+  color: var(--mih-text);
+  margin-bottom: 12px;
   display: flex;
   align-items: center;
   gap: 8px;
 }
-.card-title .badge {
+#easy-mihomo-settings .card-title .badge {
   font-size: 10px;
   padding: 2px 8px;
   border-radius: 10px;
   font-weight: 600;
 }
-.badge-green { background: var(--green-light); color: var(--green); }
-.badge-red { background: var(--red-light); color: var(--red); }
-.badge-blue { background: rgba(52,152,219,0.1); color: var(--blue); }
-.badge-gray { background: rgba(119,119,119,0.1); color: var(--text-dim); }
-.badge-orange { background: var(--accent-light); color: var(--accent); }
+#easy-mihomo-settings .badge-green { background: var(--mih-green-light); color: var(--mih-green); }
+#easy-mihomo-settings .badge-red { background: var(--mih-red-light); color: var(--mih-red); }
+#easy-mihomo-settings .badge-blue { background: rgba(52,152,219,0.1); color: var(--mih-blue); }
+#easy-mihomo-settings .badge-gray { background: rgba(119,119,119,0.1); color: var(--mih-text-dim); }
+#easy-mihomo-settings .badge-orange { background: var(--mih-accent-light); color: var(--mih-accent); }
 
 /* 表单行 */
-.form-row {
+#easy-mihomo-settings .form-row {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   flex-wrap: wrap;
 }
-.form-label {
+#easy-mihomo-settings .form-label {
   font-size: 13px;
-  color: var(--text-dim);
+  color: var(--mih-text-dim);
   min-width: 70px;
   flex-shrink: 0;
 }
-.form-value {
+#easy-mihomo-settings .form-value {
   font-size: 13px;
-  color: var(--text);
+  color: var(--mih-text);
   font-weight: 600;
 }
 
-/* 按钮 */
-.btn {
+/* 运行状态样式 */
+#easy-mihomo-settings .status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 16px;
+  font-weight: 700;
+}
+#easy-mihomo-settings .status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+#easy-mihomo-settings .status-dot.running {
+  background: var(--mih-green);
+  box-shadow: 0 0 8px var(--mih-green);
+}
+#easy-mihomo-settings .status-dot.stopped {
+  background: var(--mih-red);
+  box-shadow: 0 0 8px var(--mih-red);
+}
+#easy-mihomo-settings .status-dot.unknown {
+  background: var(--mih-text-dim);
+}
+#easy-mihomo-settings .text-green { color: var(--mih-green); }
+#easy-mihomo-settings .text-red { color: var(--mih-red); }
+#easy-mihomo-settings .status-pid-val {
+  font-size: 12px;
+  color: var(--mih-text-dim);
+  font-weight: normal;
+}
+#easy-mihomo-settings .service-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+#easy-mihomo-settings .service-actions .btn {
+  flex: 1;
+  min-width: 75px;
+}
+
+/* 按钮优化 */
+#easy-mihomo-settings .btn {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  justify-content: center;
+  gap: 6px;
   padding: 6px 14px;
   border: none;
-  border-radius: var(--radius-sm);
+  border-radius: 6px;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease-in-out;
   color: white;
 }
-.btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
-.btn:active { transform: translateY(0); }
-.btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
-.btn-green { background: var(--green); }
-.btn-red { background: var(--red); }
-.btn-accent { background: var(--blue); }
-.btn-yellow { background: var(--yellow); color: #212529; }
-.btn-dark { background: #555555; }
-.btn-accent { background: var(--accent); }
-.btn-sm { padding: 4px 10px; font-size: 12px; }
+#easy-mihomo-settings .btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+  filter: brightness(1.08);
+}
+#easy-mihomo-settings .btn:active {
+  transform: translateY(0);
+}
+#easy-mihomo-settings .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+#easy-mihomo-settings .btn-green { background: var(--mih-green); }
+#easy-mihomo-settings .btn-red { background: var(--mih-red); }
+#easy-mihomo-settings .btn-yellow { background: var(--mih-yellow); color: white !important; }
+#easy-mihomo-settings .btn-dark { background: #555555; }
+#easy-mihomo-settings .btn-accent { background: var(--mih-accent); }
+#easy-mihomo-settings .btn-sm { padding: 4px 10px; font-size: 12px; }
+
+/* 订阅卡片样式 */
+#easy-mihomo-settings .sub-list-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 10px;
+}
+#easy-mihomo-settings .sub-item-card {
+  border: 1px solid var(--mih-border);
+  background: var(--mih-bg-card-hover, #fafafa);
+  border-radius: var(--mih-radius-sm);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+#easy-mihomo-settings .sub-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+#easy-mihomo-settings .sub-item-name {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--mih-text);
+}
+#easy-mihomo-settings .sub-item-percent {
+  font-weight: 700;
+  font-size: 13px;
+}
+#easy-mihomo-settings .sub-progress-bar-bg {
+  width: 100%;
+  height: 6px;
+  background: var(--mih-border, #ddd);
+  border-radius: 3px;
+  overflow: hidden;
+}
+#easy-mihomo-settings .sub-progress-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+#easy-mihomo-settings .sub-item-footer {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--mih-text-dim);
+}
 
 /* 选择框 */
-select {
+#easy-mihomo-settings select {
   background: white;
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 6px 10px;
+  color: var(--mih-text);
+  border: 1px solid var(--mih-border);
+  border-radius: var(--mih-radius-sm);
+  padding: 5px 10px;
   font-size: 13px;
   cursor: pointer;
   transition: border-color 0.2s;
 }
-select:hover, select:focus { border-color: var(--accent); outline: none; }
+#easy-mihomo-settings select:hover, 
+#easy-mihomo-settings select:focus { border-color: var(--mih-accent); outline: none; }
 
 /* 提示框 */
-.tip {
-  background: var(--accent-light);
-  border-left: 3px solid var(--accent);
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+#easy-mihomo-settings .tip {
+  background: var(--mih-accent-light);
+  border-left: 3px solid var(--mih-accent);
+  border-radius: 0 var(--mih-radius-sm) var(--mih-radius-sm) 0;
   padding: 8px 12px;
   font-size: 12px;
-  color: var(--text-dim);
+  color: var(--mih-text-dim);
   margin-top: 10px;
   line-height: 1.6;
 }
-.tip strong { color: var(--text); }
-.tip a { color: var(--accent-hover); }
+#easy-mihomo-settings .tip strong { color: var(--mih-text); }
+#easy-mihomo-settings .tip a { color: var(--mih-accent-hover); }
 
 /* 提示 */
-.alert { padding: 10px 14px; border-radius: var(--radius-sm); margin-bottom: 16px; font-size: 13px; }
-.alert-warning { background: var(--yellow-light); border: 1px solid rgba(243,156,18,0.3); color: #b87500; }
-.alert-error { background: var(--red-light); border: 1px solid rgba(231,76,60,0.3); color: var(--red); }
-.alert-success { background: var(--green-light); border: 1px solid rgba(39,174,96,0.3); color: var(--green); }
-
-/* 操作栏 */
-.actions {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px solid var(--border);
-}
+#easy-mihomo-settings .alert { padding: 10px 14px; border-radius: var(--mih-radius-sm); margin-bottom: 16px; font-size: 13px; }
+#easy-mihomo-settings .alert-warning { background: var(--mih-yellow-light); border: 1px solid rgba(243,156,18,0.3); color: #b87500; }
+#easy-mihomo-settings .alert-error { background: var(--mih-red-light); border: 1px solid rgba(231,76,60,0.3); color: var(--mih-red); }
+#easy-mihomo-settings .alert-success { background: var(--mih-green-light); border: 1px solid rgba(39,174,96,0.3); color: var(--mih-green); }
 
 /* 进度文本 */
-.progress-text { font-size: 12px; color: var(--text-dim); margin-top: 6px; }
+#easy-mihomo-settings .progress-text { font-size: 12px; color: var(--mih-text-dim); margin-top: 4px; }
 
 /* 日志/预格式 */
-pre {
+#easy-mihomo-settings #logContent {
   background: #fafafa;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--mih-border);
+  border-radius: var(--mih-radius-sm);
   padding: 12px;
   max-height: 360px;
   overflow: auto;
   font-size: 12px;
   line-height: 1.5;
-  color: var(--text);
+  color: var(--mih-text);
 }
 
 /* 弹窗 */
-.modal-overlay {
+#easy-mihomo-settings .modal-overlay {
   display: none;
   position: fixed;
   top: 0; left: 0;
@@ -1116,63 +1223,152 @@ pre {
   z-index: 1000;
   overflow: auto;
 }
-.modal-content {
+#easy-mihomo-settings .modal-content {
   position: relative;
   margin: 5% auto;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  background: var(--mih-bg-card);
+  border: 1px solid var(--mih-border);
+  border-radius: var(--mih-radius);
   padding: 24px;
   width: 90%;
   max-width: 1200px;
   min-height: 500px;
   box-shadow: 0 8px 32px rgba(0,0,0,0.15);
 }
-.modal-content h3 {
-  color: var(--text);
+#easy-mihomo-settings .modal-content h3 {
+  color: var(--mih-text);
   margin-bottom: 16px;
   padding-bottom: 12px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--mih-border);
 }
-.modal-content textarea {
+#easy-mihomo-settings .modal-content textarea {
   width: 100%;
   height: 450px;
   background: #fafafa;
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  color: var(--mih-text);
+  border: 1px solid var(--mih-border);
+  border-radius: var(--mih-radius-sm);
   padding: 12px;
   font-family: 'SF Mono', 'Fira Code', monospace;
   font-size: 13px;
   resize: vertical;
 }
-.modal-content textarea:focus { border-color: var(--accent); outline: none; }
-.modal-footer {
+#easy-mihomo-settings .modal-content textarea:focus { border-color: var(--mih-accent); outline: none; }
+#easy-mihomo-settings .modal-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-top: 16px;
   padding-top: 12px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--mih-border);
 }
-.header-links .lang-toggle {
+#easy-mihomo-settings .header-links .lang-toggle {
   display: inline-flex;
   align-items: center;
   padding: 3px 8px;
   border-radius: 4px;
   font-size: 12px;
   font-weight: 600;
-  color: var(--accent);
+  color: var(--mih-accent);
   background: transparent;
-  border: 1px solid var(--accent);
+  border: 1px solid var(--mih-accent);
   text-decoration: none;
   transition: all 0.2s;
 }
-.header-links .lang-toggle:hover {
-  background: var(--accent);
+#easy-mihomo-settings .header-links .lang-toggle:hover {
+  background: var(--mih-accent);
   color: white;
   text-decoration: none;
 }
+/* 代码编辑器样式 - Scoped under #configModal to avoid pollution */
+#configModal .code-editor-container {
+  display: flex;
+  background: #1e1e1e !important;
+  color: #d4d4d4 !important;
+  border: 1px solid var(--mih-border, #dddddd);
+  border-radius: var(--mih-radius-sm, 8px);
+  font-family: 'SF Mono', 'Fira Code', Consolas, Monaco, monospace;
+  font-size: 13px;
+  position: relative;
+  height: 480px;
+  overflow: hidden;
+  margin-top: 10px;
+}
+
+#configModal .line-numbers {
+  width: 42px;
+  padding: 12px 0;
+  text-align: right;
+  padding-right: 10px;
+  border-right: 1px solid #3c3c3c;
+  color: #858585;
+  background: #1e1e1e;
+  user-select: none;
+  overflow: hidden;
+  line-height: 1.5;
+}
+
+#configModal .editor-area {
+  flex: 1;
+  position: relative;
+  height: 100%;
+}
+
+#configModal #editor-textarea, 
+#configModal #highlight-overlay {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 12px;
+  border: none;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: 1.5;
+  white-space: pre;
+  word-wrap: normal;
+  overflow: auto;
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: transparent;
+}
+
+#configModal #editor-textarea {
+  color: transparent !important;
+  caret-color: #ffffff !important;
+  resize: none;
+  z-index: 2;
+  outline: none;
+}
+
+#configModal #highlight-overlay {
+  z-index: 1;
+  color: #d4d4d4;
+  pointer-events: none;
+  overflow: hidden;
+  max-height: none !important;
+  height: 100% !important;
+}
+
+#configModal #highlight-code {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  white-space: pre;
+}
+
+/* YAML 语法高亮配色 */
+#configModal .yaml-comment { color: #6a9955 !important; font-style: italic; }
+#configModal .yaml-key { color: #9cdcfe !important; font-weight: bold; }
+#configModal .yaml-string { color: #ce9178 !important; }
+#configModal .yaml-number { color: #b5cea8 !important; }
+#configModal .yaml-bool { color: #569cd6 !important; font-weight: bold; }
+#configModal .yaml-anchor { color: #c586c0 !important; }
 </style>
 <script>
 function executeAction(action) {
@@ -1736,6 +1932,10 @@ function openConfigEditor() {
   document.getElementById('configModal').style.display = 'block';
   // 禁用页面滚动
   document.body.style.overflow = 'hidden';
+  // 初始化代码编辑器
+  setTimeout(function() {
+    updateEditor();
+  }, 50);
 }
 
 function closeConfigEditor() {
@@ -1761,8 +1961,7 @@ document.addEventListener('keydown', function(event) {
 
 // 使用浏览器原生表单提交，确保 emhttp 正常接收带 Content-Length 的上传
 </script>
-</head>
-<body>
+<div id="easy-mihomo-settings">
 
 <!-- 头部 -->
 <div class="header">
@@ -1776,236 +1975,252 @@ document.addEventListener('keydown', function(event) {
       <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
       GitHub
     </a>
-    <span class="author-info">by bigv</span>
     <a href="?lang=<?= getLang() === 'cn' ? 'en' : 'cn' ?>" class="lang-toggle"><?= t('lang_toggle') ?></a>
   </div>
 </div>
 
 <?php if ($installStatus) { echo '<div class="alert alert-warning">' . $installStatus . '</div>'; } ?>
 
-<!-- 状态横幅 -->
-<div class="status-banner">
-  <?php
-    $statusText = trim($status ?? 'unknown');
-    if (strpos($statusText, 'running') !== false) {
-      $pid = '';
-      if (preg_match('/pid=(\d+)/', $statusText, $matches)) { $pid = $matches[1]; }
-      echo '<div class="status-dot running"></div>';
-      echo '<span class="status-text">' . t('running') . '</span>';
-      if ($pid) echo '<span class="status-pid">' . t('pid') . ': ' . $pid . '</span>';
-    } elseif (strpos($statusText, 'stopped') !== false) {
-      echo '<div class="status-dot stopped"></div>';
-      echo '<span class="status-text">' . t('stopped') . '</span>';
-    } else {
-      echo '<div class="status-dot unknown"></div>';
-      echo '<span class="status-text">' . htmlspecialchars($statusText) . '</span>';
-    }
-  ?>
-</div>
+<!-- 双栏版面布局 -->
+<div class="dashboard-layout">
+  
+  <!-- 左栏：控制与状态 (40% 宽度) -->
+  <div class="layout-left">
+    
+    <!-- 运行状态与服务控制 -->
+    <div class="card">
+      <div class="card-title">
+        <i class="fa fa-info-circle"></i> <?= t('service_status') ?>
+      </div>
+      <div class="status-indicator">
+        <?php
+          $statusText = trim($status ?? 'unknown');
+          if (strpos($statusText, 'running') !== false) {
+            $pid = '';
+            if (preg_match('/pid=(\d+)/', $statusText, $matches)) { $pid = $matches[1]; }
+            echo '<span class="status-dot running"></span>';
+            echo '<span class="status-text-val text-green">' . t('running') . '</span>';
+            if ($pid) echo '<span class="status-pid-val"> (PID: ' . $pid . ')</span>';
+          } elseif (strpos($statusText, 'stopped') !== false) {
+            echo '<span class="status-dot stopped"></span>';
+            echo '<span class="status-text-val text-red">' . t('stopped') . '</span>';
+          } else {
+            echo '<span class="status-dot unknown"></span>';
+            echo '<span class="status-text-val text-dim">' . htmlspecialchars($statusText) . '</span>';
+          }
+        ?>
+      </div>
+      <div class="service-actions">
+        <button onclick="executeAction('start')" class="btn btn-green"><i class="fa fa-play"></i> <?= t('start') ?></button>
+        <button onclick="executeAction('restart')" class="btn btn-yellow"><i class="fa fa-refresh"></i> <?= t('restart') ?></button>
+        <button onclick="executeAction('stop')" class="btn btn-red"><i class="fa fa-stop"></i> <?= t('stop') ?></button>
+      </div>
+      
+      <div class="startup-setting" style="margin-top:12px; border-top:1px dashed var(--border); padding-top:10px;">
+        <form method="POST" style="display:inline;margin:0;">
+          <input type="hidden" name="cmd" value="set_bootstart" />
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;">
+            <input type="checkbox" name="enable" value="1" <?= $bootstartOn ? 'checked' : '' ?> onchange="this.form.submit()" style="width:16px;height:16px;" />
+            <?= t('auto_start') ?>
+            <?php if ($bootstartOn): ?>
+              <span class="badge badge-green" style="font-size:10px;padding:1px 6px;"><?= t('enabled') ?></span>
+            <?php else: ?>
+              <span class="badge badge-gray" style="font-size:10px;padding:1px 6px;"><?= t('disabled') ?></span>
+            <?php endif; ?>
+          </label>
+        </form>
+      </div>
+    </div>
+    
+    <!-- 核心引擎卡片 -->
+    <div class="card">
+      <div class="card-title">
+        <i class="fa fa-cogs"></i> <?= t('core_engine') ?>
+        <?php if ($binUdiskExists): ?>
+          <span class="badge badge-green"><?= t('installed') ?></span>
+        <?php else: ?>
+          <span class="badge badge-red"><?= t('not_installed') ?></span>
+        <?php endif; ?>
+      </div>
 
-<!-- 卡片网格 -->
-<div class="grid">
-
-  <!-- 核心卡片 -->
-  <div class="card">
-    <div class="card-title">
-      <?= t('core_engine') ?>
       <?php if ($binUdiskExists): ?>
-        <span class="badge badge-green"><?= t('installed') ?></span>
+        <div class="form-row">
+          <span class="form-label"><?= t('version') ?></span>
+          <span class="form-value" id="local-version"><?= htmlspecialchars(trim($version ?? 'unknown')) ?></span>
+          <?php
+            $variantLabels = [
+              'standard' => ['text' => t('standard'), 'color' => '#777777'],
+              'compatible' => ['text' => t('compatible'), 'color' => '#3498db'],
+              'v3' => ['text' => t('v3_optimized'), 'color' => '#27ae60']
+            ];
+            $label = $variantLabels[$installedVariant] ?? $variantLabels['standard'];
+            echo '<span class="badge" style="background:' . $label['color'] . '22;color:' . $label['color'] . ';">' . $label['text'] . '</span>';
+          ?>
+          <span id="update-info" style="margin-left:8px;font-weight:bold;"></span>
+        </div>
+        <div class="form-row">
+          <span class="form-label"><?= t('variant') ?></span>
+          <form method="POST" style="display:inline;margin:0;">
+            <input type="hidden" name="cmd" value="set_variant" />
+            <select name="variant" onchange="this.form.submit()" style="min-width:160px; max-width:200px;">
+              <option value="standard" <?= $currentVariant === 'standard' ? 'selected' : '' ?>><?= t('standard_desc') ?></option>
+              <option value="compatible" <?= $currentVariant === 'compatible' ? 'selected' : '' ?>><?= t('compatible_desc') ?></option>
+              <option value="v3" <?= $currentVariant === 'v3' ? 'selected' : '' ?>><?= t('v3_desc') ?></option>
+            </select>
+          </form>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:8px;">
+          <button id="download-btn" onclick="smartDownload('core', this)" class="btn btn-accent btn-sm"><?= t('reinstall') ?></button>
+          <button onclick="checkUpdate()" class="btn btn-dark btn-sm"><?= t('check_update') ?></button>
+        </div>
       <?php else: ?>
-        <span class="badge badge-red"><?= t('not_installed') ?></span>
+        <div class="form-row">
+          <span class="form-label"><?= t('version') ?></span>
+          <span class="form-value" style="color:var(--red);"><?= t('not_installed') ?></span>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:8px;">
+          <button id="download-btn" onclick="smartDownload('core', this)" class="btn btn-green btn-sm"><?= t('download') ?></button>
+          <button onclick="checkUpdate()" class="btn btn-dark btn-sm"><?= t('check_latest') ?></button>
+        </div>
       <?php endif; ?>
+      <div id="progress-core" class="progress-text"></div>
+      <div class="tip">
+        From <a href="https://github.com/MetaCubeX/mihomo/releases" target="_blank">GitHub Releases</a> <?= t('tip_manual_core') ?> <code>/boot/config/plugins/easy-mihomo/mihomo</code>
+      </div>
     </div>
 
-    <?php if ($binUdiskExists): ?>
+    <!-- UI 面板卡片 -->
+    <div class="card">
+      <div class="card-title">
+        <i class="fa fa-desktop"></i> <?= t('dash_ui_title') ?>
+        <?php if ($uiExists): ?>
+          <span class="badge badge-green"><?= t('installed') ?></span>
+        <?php else: ?>
+          <span class="badge badge-red"><?= t('not_installed') ?></span>
+        <?php endif; ?>
+      </div>
+
+      <?php if ($uiExists): ?>
+        <div class="form-row">
+          <span class="form-label"><?= t('version') ?></span>
+          <span class="form-value" id="ui-local-version"><?= htmlspecialchars(trim($uiVersion ?? 'unknown')) ?></span>
+          <span id="ui-update-info" style="margin-left:8px;font-weight:bold;"></span>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:8px;margin-bottom:12px;">
+          <button id="download-ui-btn" onclick="smartDownloadUI('ui', this)" class="btn btn-accent btn-sm"><?= t('reinstall') ?></button>
+          <button onclick="checkUIUpdate()" class="btn btn-dark btn-sm"><?= t('check_update') ?></button>
+          <?php if (strpos($statusText, 'running') !== false && $port): ?>
+            <button onclick="openConsole()" class="btn btn-green btn-sm"><i class="fa fa-external-link"></i> <?= t('open_console') ?></button>
+          <?php endif; ?>
+        </div>
+      <?php else: ?>
+        <div class="form-row">
+          <span class="form-label"><?= t('version') ?></span>
+          <span class="form-value" style="color:var(--red);"><?= t('not_installed') ?></span>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:8px;margin-bottom:12px;">
+          <button id="download-ui-btn" onclick="smartDownloadUI('ui', this)" class="btn btn-green btn-sm"><?= t('download') ?> UI</button>
+          <button onclick="checkUIUpdate()" class="btn btn-dark btn-sm"><?= t('check_latest') ?></button>
+        </div>
+      <?php endif; ?>
+      <div id="progress-ui" class="progress-text"></div>
       <div class="form-row">
-        <span class="form-label"><?= t('version') ?></span>
-        <span class="form-value" id="local-version"><?= htmlspecialchars(trim($version ?? 'unknown')) ?></span>
-        <?php
-          $variantLabels = [
-            'standard' => ['text' => t('standard'), 'color' => '#777777'],
-            'compatible' => ['text' => t('compatible'), 'color' => '#3498db'],
-            'v3' => ['text' => t('v3_optimized'), 'color' => '#27ae60']
-          ];
-          $label = $variantLabels[$installedVariant] ?? $variantLabels['standard'];
-          echo '<span class="badge" style="background:' . $label['color'] . '22;color:' . $label['color'] . ';">' . $label['text'] . '</span>';
-        ?>
-        <span id="update-info" style="margin-left:8px;font-weight:bold;"></span>
+        <span class="form-label"><?= t('host') ?></span>
+        <span class="form-value" id="zash-host">-</span>
       </div>
       <div class="form-row">
-        <span class="form-label"><?= t('variant') ?></span>
-        <form method="POST" style="display:inline;margin:0;">
-          <input type="hidden" name="cmd" value="set_variant" />
-          <select name="variant" onchange="this.form.submit()" style="min-width:180px;">
-            <option value="standard" <?= $currentVariant === 'standard' ? 'selected' : '' ?>><?= t('standard_desc') ?></option>
-            <option value="compatible" <?= $currentVariant === 'compatible' ? 'selected' : '' ?>><?= t('compatible_desc') ?></option>
-            <option value="v3" <?= $currentVariant === 'v3' ? 'selected' : '' ?>><?= t('v3_desc') ?></option>
+        <span class="form-label"><?= t('port') ?></span>
+        <span class="form-value"><?= $port ? htmlspecialchars($port) : '<span style="color:var(--red)">Not Set</span>' ?></span>
+      </div>
+      <div class="form-row">
+        <span class="form-label"><?= t('secret') ?></span>
+        <span class="form-value"><?= $secret ? htmlspecialchars($secret) : '<span style="color:var(--red)">Not Set</span>' ?></span>
+      </div>
+      <div class="tip">
+        <?= t('tip_manual_ui') ?>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 右栏：配置与监控 (60% 宽度) -->
+  <div class="layout-right">
+    
+    <!-- 配置卡片 -->
+    <div class="card">
+      <div class="card-title"><i class="fa fa-file-text-o"></i> <?= t('configuration') ?></div>
+
+      <div class="form-row">
+        <span class="form-label"><?= t('profile') ?></span>
+        <form id="configForm" method="POST" style="display:inline;margin:0;">
+          <input type="hidden" name="cmd" value="select_conf" />
+          <select name="name" onchange="this.form.submit()" style="min-width:240px; max-width:100%;">
+            <?php if (!$selectedName): ?>
+              <option value="" disabled selected><?= t('select_config') ?></option>
+            <?php endif; ?>
+            <?php foreach ($available as $f): ?>
+              <option value="<?= htmlspecialchars($f) ?>" <?= ($f === $selectedName ? 'selected' : '') ?>><?= htmlspecialchars($f) ?></option>
+            <?php endforeach; ?>
           </select>
         </form>
       </div>
-      <div style="margin-top:12px;display:flex;gap:8px;">
-        <button id="download-btn" onclick="smartDownload('core', this)" class="btn btn-accent btn-sm"><?= t('reinstall') ?></button>
-        <button onclick="checkUpdate()" class="btn btn-dark btn-sm"><?= t('check_update') ?></button>
+      <div style="margin-top:12px; display:flex; gap:8px;">
+        <button onclick="openConfigEditor()" <?= $selectedPath? '':'disabled' ?> class="btn btn-accent btn-sm">
+          <i class="fa fa-edit"></i> <?= $selectedPath? t('edit') : t('select_first') ?>
+        </button>
+        <button onclick="document.getElementById('configForm').submit()" class="btn btn-dark btn-sm"><?= t('refresh') ?></button>
+        <button onclick="openFileManager()" class="btn btn-dark btn-sm"><?= t('open_folder') ?></button>
       </div>
-    <?php else: ?>
-      <div class="form-row">
-        <span class="form-label"><?= t('version') ?></span>
-        <span class="form-value" style="color:var(--red);"><?= t('not_installed') ?></span>
-      </div>
-      <div style="margin-top:12px;display:flex;gap:8px;">
-        <button id="download-btn" onclick="smartDownload('core', this)" class="btn btn-green btn-sm"><?= t('download') ?></button>
-        <button onclick="checkUpdate()" class="btn btn-dark btn-sm"><?= t('check_latest') ?></button>
-      </div>
-    <?php endif; ?>
-    <div id="progress-core" class="progress-text"></div>
-    <div class="tip">
-      From <a href="https://github.com/MetaCubeX/mihomo/releases" target="_blank">GitHub Releases</a> <?= t('tip_manual_core') ?> <code>/boot/config/plugins/easy-mihomo/mihomo</code>
-    </div>
-  </div>
 
-  <!-- UI 卡片 -->
-  <div class="card">
-    <div class="card-title">
-      <?= t('dashboard_ui') ?>
-      <?php if ($uiExists): ?>
-        <span class="badge badge-green"><?= t('installed') ?></span>
-      <?php else: ?>
-        <span class="badge badge-red"><?= t('not_installed') ?></span>
+      <?php if ($selectedPath): ?>
+        <div class="form-row" style="margin-top:10px;">
+          <span class="form-label"><?= t('path') ?></span>
+          <span style="font-size:12px;color:var(--text-dim); word-break:break-all;"><?= htmlspecialchars($selectedPath) ?></span>
+        </div>
       <?php endif; ?>
+
+      <div class="tip" style="margin-top:10px;">
+        <svg style="display:inline-block;vertical-align:middle;margin-right:4px;" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.161c-.18 1.897-.962 6.502-1.359 8.627-.168.9-.5 1.201-.82 1.23-.697.064-1.226-.461-1.901-.903-1.056-.693-1.653-1.124-2.678-1.8-1.185-.781-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.139-5.062 3.345-.479.329-.913.489-1.302.481-.428-.008-1.252-.241-1.865-.44-.752-.244-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.831-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635.099-.002.321.023.465.141.121.099.155.232.171.326.016.094.036.308.02.475z"/></svg>
+        <strong><?= t('tip_no_config') ?></strong>
+        <a href="https://t.me/+7jcTMePlNVwwZjg1" target="_blank" style="color:#0088cc;"><?= t('telegram') ?></a>
+      </div>
     </div>
 
-    <?php if ($uiExists): ?>
+    <!-- 订阅集流量额度 (智能显示) -->
+    <div id="subscription-card" class="card" style="display:none;">
+      <div class="card-title">
+        <i class="fa fa-credit-card"></i> <?= t('subscription_traffic') ?>
+      </div>
+      <div id="subscription-list" class="sub-list-container">
+        <!-- 动态生成 -->
+      </div>
+    </div>
+
+    <!-- 日志审计与清理 -->
+    <div class="card">
+      <div class="card-title"><i class="fa fa-terminal"></i> <?= t('logs_viewer') ?></div>
       <div class="form-row">
-        <span class="form-label"><?= t('version') ?></span>
-        <span class="form-value" id="ui-local-version"><?= htmlspecialchars(trim($uiVersion ?? 'unknown')) ?></span>
-        <span id="ui-update-info" style="margin-left:8px;font-weight:bold;"></span>
+        <span class="form-label"><?= t('size') ?></span>
+        <span class="form-value"><?= $logSizeFormatted ?></span>
+      </div>
+      <div class="form-row">
+        <span class="form-label"><?= t('lines') ?></span>
+        <span class="form-value"><?= $logLines ?></span>
+      </div>
+      <div class="form-row">
+        <span class="form-label"><?= t('cleanup') ?></span>
+        <span style="font-size:13px;color:var(--text-dim);"><?= t('cleanup_value') ?></span>
       </div>
       <div style="margin-top:12px;display:flex;gap:8px;">
-        <button id="download-ui-btn" onclick="smartDownloadUI('ui', this)" class="btn btn-accent btn-sm"><?= t('reinstall') ?></button>
-        <button onclick="checkUIUpdate()" class="btn btn-dark btn-sm"><?= t('check_update') ?></button>
+        <button onclick="openLogViewer()" class="btn btn-accent btn-sm">
+          <i class="fa fa-eye"></i> <?= t('view_logs') ?>
+        </button>
+        <button onclick="executeLogAction('clearlog')" class="btn btn-red btn-sm">
+          <i class="fa fa-trash"></i> <?= t('clear_logs') ?>
+        </button>
       </div>
-    <?php else: ?>
-      <div class="form-row">
-        <span class="form-label"><?= t('version') ?></span>
-        <span class="form-value" style="color:var(--red);"><?= t('not_installed') ?></span>
-      </div>
-      <div style="margin-top:12px;display:flex;gap:8px;">
-        <button id="download-ui-btn" onclick="smartDownloadUI('ui', this)" class="btn btn-green btn-sm"><?= t('download') ?> UI</button>
-        <button onclick="checkUIUpdate()" class="btn btn-dark btn-sm"><?= t('check_latest') ?></button>
-      </div>
-    <?php endif; ?>
-    <div id="progress-ui" class="progress-text"></div>
-    <div class="form-row" style="margin-top:10px;">
-      <span class="form-label"><?= t('host') ?></span>
-      <span class="form-value" id="zash-host">-</span>
     </div>
-    <div class="form-row">
-      <span class="form-label"><?= t('port') ?></span>
-      <span class="form-value"><?= $port ? htmlspecialchars($port) : '<span style="color:var(--red)">Not Set</span>' ?></span>
-    </div>
-    <div class="form-row">
-      <span class="form-label"><?= t('secret') ?></span>
-      <span class="form-value"><?= $secret ? htmlspecialchars($secret) : '<span style="color:var(--red)">Not Set</span>' ?></span>
-    </div>
-    <div class="tip">
-      <?= t('tip_manual_ui') ?>
-    </div>
-  </div>
 
-</div>
-
-<!-- 配置卡片（全宽） -->
-<div class="card" style="margin-bottom:20px;">
-  <div class="card-title"><?= t('configuration') ?></div>
-
-  <div class="form-row">
-    <span class="form-label"><?= t('profile') ?></span>
-    <form id="configForm" method="POST" style="display:inline;margin:0;">
-      <input type="hidden" name="cmd" value="select_conf" />
-      <select name="name" onchange="this.form.submit()" style="min-width:260px;">
-        <?php if (!$selectedName): ?>
-          <option value="" disabled selected><?= t('select_config') ?></option>
-        <?php endif; ?>
-        <?php foreach ($available as $f): ?>
-          <option value="<?= htmlspecialchars($f) ?>" <?= ($f === $selectedName ? 'selected' : '') ?>><?= htmlspecialchars($f) ?></option>
-        <?php endforeach; ?>
-      </select>
-    </form>
-    <button onclick="openConfigEditor()" <?= $selectedPath? '':'disabled' ?> class="btn btn-accent btn-sm">
-      <i class="fa fa-edit"></i> <?= $selectedPath? t('edit') : t('select_first') ?>
-    </button>
-    <button onclick="document.getElementById('configForm').submit()" class="btn btn-dark btn-sm"><?= t('refresh') ?></button>
-    <button onclick="openFileManager()" class="btn btn-dark btn-sm"><?= t('open_folder') ?></button>
-  </div>
-
-  <?php if ($selectedPath): ?>
-    <div class="form-row">
-      <span class="form-label"><?= t('path') ?></span>
-      <span style="font-size:12px;color:var(--text-dim);"><?= htmlspecialchars($selectedPath) ?></span>
-    </div>
-  <?php endif; ?>
-
-  <div class="tip" style="margin-top:10px;">
-    <svg style="display:inline-block;vertical-align:middle;margin-right:4px;" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.161c-.18 1.897-.962 6.502-1.359 8.627-.168.9-.5 1.201-.82 1.23-.697.064-1.226-.461-1.901-.903-1.056-.693-1.653-1.124-2.678-1.8-1.185-.781-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.139-5.062 3.345-.479.329-.913.489-1.302.481-.428-.008-1.252-.241-1.865-.44-.752-.244-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.831-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635.099-.002.321.023.465.141.121.099.155.232.171.326.016.094.036.308.02.475z"/></svg>
-    <strong><?= t('tip_no_config') ?></strong>
-    <a href="https://t.me/+7jcTMePlNVwwZjg1" target="_blank" style="color:#0088cc;"><?= t('telegram') ?></a>
-  </div>
-</div>
-
-<!-- 日志和启动设置 -->
-<div class="grid">
-
-  <!-- 日志卡片 -->
-  <div class="card">
-    <div class="card-title"><?= t('logs') ?></div>
-    <div class="form-row">
-      <span class="form-label"><?= t('size') ?></span>
-      <span class="form-value"><?= $logSizeFormatted ?></span>
-    </div>
-    <div class="form-row">
-      <span class="form-label"><?= t('lines') ?></span>
-      <span class="form-value"><?= $logLines ?></span>
-    </div>
-    <div class="form-row">
-      <span class="form-label"><?= t('cleanup') ?></span>
-      <span style="font-size:13px;color:var(--text-dim);"><?= t('cleanup_value') ?></span>
-    </div>
-    <div style="margin-top:12px;display:flex;gap:8px;">
-      <button onclick="openLogViewer()" class="btn btn-accent btn-sm">
-        <i class="fa fa-eye"></i> <?= t('view_logs') ?>
-      </button>
-    </div>
-  </div>
-
-  <!-- 启动设置卡片 -->
-  <div class="card">
-    <div class="card-title"><?= t('startup') ?></div>
-    <div class="form-row">
-      <form method="POST" style="display:inline;margin:0;">
-        <input type="hidden" name="cmd" value="set_bootstart" />
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;">
-          <input type="checkbox" name="enable" value="1" <?= $bootstartOn ? 'checked' : '' ?> onchange="this.form.submit()" style="width:16px;height:16px;" />
-          <?= t('auto_start') ?>
-        </label>
-      </form>
-      <?php if ($bootstartOn): ?>
-        <span class="badge badge-green"><?= t('enabled') ?></span>
-      <?php else: ?>
-        <span class="badge badge-gray"><?= t('disabled') ?></span>
-      <?php endif; ?>
-    </div>
-  </div>
-
-</div>
-
-<!-- 操作栏 -->
-<div class="card" style="margin-top:0;">
-  <div class="actions" style="margin-top:0;padding-top:0;border-top:none;">
-    <button onclick="openConsole()" class="btn btn-accent"><?= t('open_console') ?></button>
-    <button onclick="executeAction('start')" class="btn btn-green"><?= t('start') ?></button>
-    <button onclick="executeAction('stop')" class="btn btn-red"><?= t('stop') ?></button>
-    <button onclick="executeAction('restart')" class="btn btn-yellow"><?= t('restart') ?></button>
-    <button onclick="executeAction('clearlog')" class="btn btn-dark"><?= t('clear_logs') ?></button>
   </div>
 </div>
 
@@ -2015,7 +2230,13 @@ document.addEventListener('keydown', function(event) {
     <h3><?= t('edit_config') ?>: <?= htmlspecialchars($selectedName) ?></h3>
     <form method="POST" style="display:flex;flex-direction:column;">
       <input type="hidden" name="cmd" value="saveconf" />
-      <textarea name="content" spellcheck="false" <?= $selectedPath? '':'disabled' ?>><?php echo htmlspecialchars($confText); ?></textarea>
+      <div class="code-editor-container">
+        <div class="line-numbers" id="line-numbers">1</div>
+        <div class="editor-area">
+          <pre id="highlight-overlay"><code class="language-yaml" id="highlight-code"></code></pre>
+          <textarea id="editor-textarea" name="content" spellcheck="false" oninput="updateEditor()" onscroll="syncScroll()" <?= $selectedPath? '':'disabled' ?>><?php echo htmlspecialchars($confText); ?></textarea>
+        </div>
+      </div>
       <div class="modal-footer">
         <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
           <input type="checkbox" name="restart" value="1" <?= $selectedPath? '':'disabled' ?> /> <?= t('save_restart') ?>
@@ -2061,12 +2282,87 @@ document.addEventListener('keydown', function(event) {
 pollProgress('core', 'progress-core');
 pollProgress('ui', 'progress-ui');
 
+// HTML实体转义函数
+function escapeHtml(text) {
+  var map = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+  return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+}
+
+// 动态载入订阅流量数据并绘制进度卡片
+function loadSubscriptionStatus() {
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', '/plugins/easy-mihomo/api.php?cmd=subscription_status');
+  xhr.onload = function() {
+    if (xhr.status === 200) {
+      try {
+        var data = JSON.parse(xhr.responseText);
+        var card = document.getElementById('subscription-card');
+        var list = document.getElementById('subscription-list');
+        if (!card || !list) return;
+        
+        if (data && data.length > 0) {
+          card.style.display = 'block';
+          
+          var html = '';
+          for (var i = 0; i < data.length; i++) {
+            var item = data[i];
+            
+            // 根据百分比动态决定进度条颜色
+            var fillColor = '#27ae60'; // 正常绿色
+            if (item.percent >= 90) {
+              fillColor = '#e74c3c'; // 红色（额度告急）
+            } else if (item.percent >= 70) {
+              fillColor = '#f39c12'; // 黄色
+            }
+            
+            html += '<div class="sub-item-card">';
+            html += '  <div class="sub-item-header">';
+            html += '    <span class="sub-item-name">' + escapeHtml(item.name) + '</span>';
+            html += '    <span class="sub-item-percent" style="color:' + fillColor + ';">' + item.percent + '%</span>';
+            html += '  </div>';
+            html += '  <div class="sub-progress-bar-bg">';
+            html += '    <div class="sub-progress-bar-fill" style="width:' + item.percent + '%; background:' + fillColor + ';"></div>';
+            html += '  </div>';
+            html += '  <div class="sub-item-footer">';
+            html += '    <span>' + '<?= t('traffic_used') ?>' + ': ' + item.used + ' / ' + '<?= t('traffic_total') ?>' + ': ' + item.total + '</span>';
+            html += '    <span>' + '<?= t('traffic_remaining') ?>' + ': ' + item.remaining + ' | ' + '<?= t('expire_time') ?>' + ': ' + item.expire + '</span>';
+            html += '  </div>';
+            html += '</div>';
+          }
+          list.innerHTML = html;
+        } else {
+          card.style.display = 'none';
+        }
+      } catch (e) {
+        document.getElementById('subscription-card').style.display = 'none';
+      }
+    } else {
+      document.getElementById('subscription-card').style.display = 'none';
+    }
+  };
+  xhr.onerror = function() {
+    document.getElementById('subscription-card').style.display = 'none';
+  };
+  xhr.send();
+}
+
 // 页面加载后自动检查更新（静默模式）
 window.addEventListener('load', function() {
   // 1秒后检查核心更新
   setTimeout(function() {
     checkUpdate(true); // 静默模式，不显示"检查中..."提示
   }, 1000);
+  
+  // 1.2秒后获取订阅流量额度
+  setTimeout(function() {
+    loadSubscriptionStatus();
+  }, 1200);
   
   // 1.5秒后检查 UI 更新
   setTimeout(function() {
@@ -2078,6 +2374,11 @@ window.addEventListener('load', function() {
     updateDownloadButtonState();
     updateUIDownloadButtonState();
   }, 3000);
+  
+  // 每 10 秒刷新一次订阅流量
+  setInterval(function() {
+    loadSubscriptionStatus();
+  }, 10000);
 });
 
 // 填充 Zashboard 访问信息（主机/端口/密码）
@@ -2085,6 +2386,112 @@ document.addEventListener('DOMContentLoaded', function() {
   var elHost = document.getElementById('zash-host');
   if (elHost) {
     elHost.textContent = window.location.hostname || '-';
+  }
+});
+
+// 同步代码编辑器的滚动偏移量
+function syncScroll() {
+  var textarea = document.getElementById('editor-textarea');
+  var overlay = document.getElementById('highlight-overlay');
+  var lineNumbers = document.getElementById('line-numbers');
+  
+  if (textarea && overlay) {
+    overlay.scrollTop = textarea.scrollTop;
+    overlay.scrollLeft = textarea.scrollLeft;
+  }
+  if (textarea && lineNumbers) {
+    lineNumbers.scrollTop = textarea.scrollTop;
+  }
+}
+
+// 实时渲染 YAML 高亮和行号
+function updateEditor() {
+  var textarea = document.getElementById('editor-textarea');
+  var code = document.getElementById('highlight-code');
+  var lineNumbers = document.getElementById('line-numbers');
+  
+  if (!textarea) return;
+  
+  var text = textarea.value;
+  
+  if (code) {
+    // 确保末尾有空格占位，防止新起一行时光标对齐出现偏差
+    code.innerHTML = highlightYaml(text) + (text.endsWith('\n') ? ' ' : '');
+  }
+  
+  if (lineNumbers) {
+    var lineCount = text.split('\n').length;
+    var linesHtml = '';
+    for (var i = 1; i <= lineCount; i++) {
+      linesHtml += i + '<br>';
+    }
+    lineNumbers.innerHTML = linesHtml;
+  }
+  
+  syncScroll();
+}
+
+// 轻量级 YAML 语法高亮引擎 (纯正则)
+function highlightYaml(text) {
+  text = escapeHtml(text);
+  
+  // 1. 暂存并保护注释 (使用含有下划线及字母的占位符，防止数字或特殊实体被误匹配)
+  var comments = [];
+  text = text.replace(/#(.*)/g, function(match) {
+    comments.push('<span class="yaml-comment">' + match + '</span>');
+    return '___COMMENT_PLG_' + (comments.length - 1) + '___';
+  });
+
+  // 2. 暂存并保护双引号/单引号内的字符串 (提前保护，避免字符串里的字符被语法分析器匹配)
+  var strings = [];
+  text = text.replace(/(".*?"|'.*?')/g, function(match) {
+    strings.push('<span class="yaml-string">' + match + '</span>');
+    return '___STRING_PLG_' + (strings.length - 1) + '___';
+  });
+
+  // 3. 提取键名 (Key) - 例如 'dns:', 'enable:'
+  text = text.replace(/(^|[\s,{}])([\w.-]+)(\s*:(?=\s|$|\n|\r))/g, '$1<span class="yaml-key">$2</span>$3');
+
+  // 4. 锚点与引用别名 &Anchor, *Alias
+  text = text.replace(/(&amp;|\*)[\w.-]+/g, '<span class="yaml-anchor">$&</span>');
+
+  // 5. 布尔值与空值
+  text = text.replace(/\b(true|false|null)\b/gi, '<span class="yaml-bool">$&</span>');
+
+  // 6. 数字数值
+  text = text.replace(/\b(\d+)\b/g, '<span class="yaml-number">$&</span>');
+
+  // 7. 恢复暂存的字符串
+  text = text.replace(/___STRING_PLG_(\d+)___/g, function(match, index) {
+    return strings[parseInt(index)];
+  });
+
+  // 8. 恢复暂存的注释
+  text = text.replace(/___COMMENT_PLG_(\d+)___/g, function(match, index) {
+    return comments[parseInt(index)];
+  });
+
+  return text;
+}
+
+// 拦截配置编辑器的 Tab 键事件，支持插入 2 个空格
+document.addEventListener('DOMContentLoaded', function() {
+  var textarea = document.getElementById('editor-textarea');
+  if (textarea) {
+    textarea.addEventListener('keydown', function(e) {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        var start = this.selectionStart;
+        var end = this.selectionEnd;
+
+        // 插入2个空格
+        this.value = this.value.substring(0, start) + "  " + this.value.substring(end);
+
+        // 恢复光标位置并更新高亮
+        this.selectionStart = this.selectionEnd = start + 2;
+        updateEditor();
+      }
+    });
   }
 });
 
@@ -2160,8 +2567,7 @@ document.addEventListener('keydown', function(event) {
   }
 });
 </script>
-</body>
-</html>
+</div>
 ]]></INLINE>
 </FILE>
 
@@ -2177,6 +2583,36 @@ $baseRun = '/usr/local/emhttp/plugins/easy-mihomo';
 $scripts = $baseRun . '/scripts';
 $progressDir = '/var/tmp/easy-mihomo-progress';
 @mkdir($progressDir, 0777, true);
+
+// ==========================================
+// Mihomo 本地 API 鉴权与请求助手函数
+// ==========================================
+function requestMihomoApi($port, $secret, $path, $method = 'GET', $data = null) {
+  $url = "http://127.0.0.1:" . $port . $path;
+  $header = "Authorization: Bearer " . $secret . "\r\n";
+  if ($method === 'PATCH' || $method === 'PUT' || $method === 'POST') {
+    $header .= "Content-Type: application/json\r\n";
+  }
+  
+  $opts = [
+    'http' => [
+      'method' => $method,
+      'header' => $header,
+      'timeout' => 1.0
+    ]
+  ];
+  
+  if ($data !== null) {
+    $opts['http']['content'] = json_encode($data);
+  }
+  
+  $context = stream_context_create($opts);
+  $response = @file_get_contents($url, false, $context);
+  if ($response) {
+    return json_decode($response, true);
+  }
+  return null;
+}
 
 $cmd = $_GET['cmd'] ?? $_POST['cmd'] ?? '';
 if ($cmd === 'get_progress') {
@@ -2216,10 +2652,21 @@ if ($cmd === 'start_download') {
   exit;
 }
 if ($cmd === 'dashboard_status') {
-  // 返回JSON格式的仪表板数据
+  // 返回 JSON 格式的仪表板数据
   header('Content-Type: application/json; charset=utf-8');
   
-  // 获取mihomo状态
+  // 1. 获取配置文件的端口和密码信息（用于鉴权）
+  $confDir = '/boot/config/plugins/easy-mihomo';
+  $selectFile = $confDir . '/selected.conf';
+  $selectedName = is_file($selectFile) ? trim(@file_get_contents($selectFile)) : '';
+  $selectedPath = ($selectedName && is_file($confDir . '/' . $selectedName)) ? ($confDir . '/' . $selectedName) : '';
+  
+  $configValues = getMihomoConfigValues($selectedPath);
+  $controller = $configValues['controller'];
+  $secret = $configValues['secret'];
+  $port = $configValues['port'];
+  
+  // 2. 获取 mihomo 状态
   $status = shell_exec("bash $scripts/status.sh 2>&1");
   $version = shell_exec("bash $scripts/version.sh 2>&1");
   
@@ -2229,18 +2676,28 @@ if ($cmd === 'dashboard_status') {
     $pid = $matches[1];
   }
   
-  // 获取内存使用信息
+  // 3. 获取运行内存 (RSS) 与 CPU
   $memoryUsage = '0 MB';
+  $cpuPercent = 0;
   if ($pid) {
+    // 内存
     $memoryInfo = shell_exec("ps -o rss= -p $pid 2>/dev/null");
     if ($memoryInfo) {
       $memoryKB = intval(trim($memoryInfo));
       $memoryMB = round($memoryKB / 1024, 1);
       $memoryUsage = $memoryMB . ' MB';
     }
+    // CPU
+    $cpuInfo = shell_exec("ps -o %cpu= -p $pid 2>/dev/null");
+    if ($cpuInfo) {
+      $cpuPercent = round(floatval(trim($cpuInfo)));
+      if ($cpuPercent > 100) {
+        $cpuPercent = 100;
+      }
+    }
   }
   
-  // 获取运行时间信息
+  // 4. 获取运行时间信息
   $uptime = '未知';
   if ($pid) {
     $startTime = shell_exec("ps -o lstart= -p $pid 2>/dev/null");
@@ -2262,17 +2719,82 @@ if ($cmd === 'dashboard_status') {
     }
   }
   
-  // 获取配置信息
-  $confDir = '/boot/config/plugins/easy-mihomo';
-  $selectFile = $confDir . '/selected.conf';
-  $selectedName = is_file($selectFile) ? trim(@file_get_contents($selectFile)) : '';
-  $selectedPath = ($selectedName && is_file($confDir . '/' . $selectedName)) ? ($confDir . '/' . $selectedName) : '';
+  // 5. 初始化实时监控指标
+  $mode = 'rule';
+  $connections = 0;
+  $downloadTotalStr = '0 B';
+  $uploadTotalStr = '0 B';
+  $downloadSpeed = '0 B/s';
+  $uploadSpeed = '0 B/s';
+  $downloadSpeedRaw = 0;
+  $uploadSpeedRaw = 0;
   
-  // 解析配置文件中的端口和密码信息
-  $configValues = getMihomoConfigValues($selectedPath);
-  $controller = $configValues['controller'];
-  $secret = $configValues['secret'];
-  $port = $configValues['port'];
+  // 如果处于运行状态且端口存在，则通过 HTTP REST API 获取实时流量数据
+  if ($isRunning && $port) {
+    // 5.1 获取代理模式
+    $configsData = requestMihomoApi($port, $secret, '/configs');
+    if ($configsData && isset($configsData['mode'])) {
+      $mode = $configsData['mode'];
+    }
+    
+    // 5.2 获取连接数与总吞吐
+    $connectionsData = requestMihomoApi($port, $secret, '/connections');
+    if ($connectionsData) {
+      $connections = isset($connectionsData['connections']) ? count($connectionsData['connections']) : 0;
+      $downloadTotal = isset($connectionsData['downloadTotal']) ? floatval($connectionsData['downloadTotal']) : 0;
+      $uploadTotal = isset($connectionsData['uploadTotal']) ? floatval($connectionsData['uploadTotal']) : 0;
+      
+      $downloadTotalStr = formatBytes($downloadTotal);
+      $uploadTotalStr = formatBytes($uploadTotal);
+      
+      // 5.3 计算实时秒级速度（使用缓存做增量计算，防抖并支持多并发请求）
+      $cacheFile = '/tmp/mihomo_traffic_cache.json';
+      $currentTime = microtime(true);
+      $prevData = null;
+      if (is_file($cacheFile)) {
+        $prevData = json_decode(@file_get_contents($cacheFile), true);
+      }
+      
+      // 如果上一次计算网速距今不足 1.2 秒，则直接返回上次计算好的速度，不重新计算也不覆盖缓存
+      if ($prevData && isset($prevData['time']) && ($currentTime - $prevData['time']) < 1.2) {
+        $downloadSpeedRaw = isset($prevData['download_speed_raw']) ? intval($prevData['download_speed_raw']) : 0;
+        $uploadSpeedRaw = isset($prevData['upload_speed_raw']) ? intval($prevData['upload_speed_raw']) : 0;
+        $downloadSpeed = isset($prevData['download_speed']) ? $prevData['download_speed'] : '0 B/s';
+        $uploadSpeed = isset($prevData['upload_speed']) ? $prevData['upload_speed'] : '0 B/s';
+      } else {
+        // 进行正常的增量速度计算
+        $dlDiff = 0;
+        $ulDiff = 0;
+        if ($prevData && isset($prevData['time'])) {
+          $timeDiff = $currentTime - $prevData['time'];
+          if ($timeDiff > 0) {
+            $dlDiff = $downloadTotal - floatval($prevData['download']);
+            $ulDiff = $uploadTotal - floatval($prevData['upload']);
+            
+            if ($dlDiff < 0) $dlDiff = 0;
+            if ($ulDiff < 0) $ulDiff = 0;
+            
+            $downloadSpeedRaw = round($dlDiff / $timeDiff);
+            $uploadSpeedRaw = round($ulDiff / $timeDiff);
+            $downloadSpeed = formatBytes($downloadSpeedRaw) . '/s';
+            $uploadSpeed = formatBytes($uploadSpeedRaw) . '/s';
+          }
+        }
+        
+        // 更新缓存文件
+        $cacheData = [
+          'time' => $currentTime,
+          'download' => $downloadTotal,
+          'upload' => $uploadTotal,
+          'download_speed_raw' => $downloadSpeedRaw,
+          'upload_speed_raw' => $uploadSpeedRaw,
+          'download_speed' => $downloadSpeed,
+          'upload_speed' => $uploadSpeed
+        ];
+        @file_put_contents($cacheFile, json_encode($cacheData));
+      }
+    }
+  }
   
   $result = [
     'running' => $isRunning,
@@ -2281,6 +2803,15 @@ if ($cmd === 'dashboard_status') {
     'pid' => $pid,
     'memory' => $memoryUsage,
     'uptime' => $uptime,
+    'cpu' => $cpuPercent,
+    'mode' => strtolower($mode),
+    'connections' => $connections,
+    'download_total' => $downloadTotalStr,
+    'upload_total' => $uploadTotalStr,
+    'download_speed' => $downloadSpeed,
+    'upload_speed' => $uploadSpeed,
+    'download_speed_raw' => $downloadSpeedRaw,
+    'upload_speed_raw' => $uploadSpeedRaw,
     'config' => [
       'selected_config' => $selectedName,
       'config_path' => $selectedPath,
@@ -2292,6 +2823,97 @@ if ($cmd === 'dashboard_status') {
   ];
   
   echo json_encode($result);
+  exit;
+}
+if ($cmd === 'set_mode') {
+  $mode = $_GET['mode'] ?? $_POST['mode'] ?? '';
+  if (!$mode) {
+    echo 'error: mode parameter missing';
+    exit;
+  }
+  
+  $confDir = '/boot/config/plugins/easy-mihomo';
+  $selectFile = $confDir . '/selected.conf';
+  $selectedName = is_file($selectFile) ? trim(@file_get_contents($selectFile)) : '';
+  $selectedPath = ($selectedName && is_file($confDir . '/' . $selectedName)) ? ($confDir . '/' . $selectedName) : '';
+  
+  $configValues = getMihomoConfigValues($selectedPath);
+  $secret = $configValues['secret'];
+  $port = $configValues['port'];
+  
+  if (!$port) {
+    echo 'error: controller port not found';
+    exit;
+  }
+  
+  // 发送 PATCH /configs 请求切换模式
+  requestMihomoApi($port, $secret, '/configs', 'PATCH', ['mode' => $mode]);
+  echo 'success';
+  exit;
+}
+if ($cmd === 'subscription_status') {
+  header('Content-Type: application/json; charset=utf-8');
+  
+  $confDir = '/boot/config/plugins/easy-mihomo';
+  $selectFile = $confDir . '/selected.conf';
+  $selectedName = is_file($selectFile) ? trim(@file_get_contents($selectFile)) : '';
+  $selectedPath = ($selectedName && is_file($confDir . '/' . $selectedName)) ? ($confDir . '/' . $selectedName) : '';
+  
+  $configValues = getMihomoConfigValues($selectedPath);
+  $secret = $configValues['secret'];
+  $port = $configValues['port'];
+  
+  // 检查 mihomo 状态
+  $status = shell_exec("bash $scripts/status.sh 2>&1");
+  $isRunning = strpos($status, 'running') !== false;
+  
+  $subs = [];
+  if ($isRunning && $port) {
+    $providersData = requestMihomoApi($port, $secret, '/providers/proxies');
+    if ($providersData && isset($providersData['providers'])) {
+      foreach ($providersData['providers'] as $name => $p) {
+        // 读取大写的 subscriptionInfo (Mihomo 专属)
+        $subInfo = $p['subscriptionInfo'] ?? null;
+        // 兼容读取小写的 subscriptionUserinfo (Clash 传统)
+        if (!$subInfo && isset($p['subscriptionUserinfo'])) {
+          $subInfo = $p['subscriptionUserinfo'];
+        }
+        
+        if ($subInfo) {
+          // 统一大小写属性名提取数据
+          $upload = floatval($subInfo['Upload'] ?? $subInfo['upload'] ?? 0);
+          $download = floatval($subInfo['Download'] ?? $subInfo['download'] ?? 0);
+          $total = floatval($subInfo['Total'] ?? $subInfo['total'] ?? 0);
+          $expire = intval($subInfo['Expire'] ?? $subInfo['expire'] ?? 0);
+          
+          if ($total > 0) {
+            $used = $upload + $download;
+            $remaining = $total - $used;
+            if ($remaining < 0) $remaining = 0;
+            
+            $percent = round(($used / $total) * 100, 2);
+            if ($percent > 100) $percent = 100;
+            
+            $expireDate = '永久有效';
+            if ($expire > 0) {
+              $expireDate = date('Y-m-d', $expire);
+            }
+            
+            $subs[] = [
+              'name' => $name,
+              'used' => formatBytes($used),
+              'total' => formatBytes($total),
+              'remaining' => formatBytes($remaining),
+              'percent' => $percent,
+              'expire' => $expireDate
+            ];
+          }
+        }
+      }
+    }
+  }
+  
+  echo json_encode($subs);
   exit;
 }
 if ($cmd === 'start') {
@@ -3088,13 +3710,94 @@ $mytiles[$pluginname]['column1'] =
         </span>
     </td>
 </tr>
-<tr class="header"><td><span class="w25">_(运行状态)_</span><span class="w25">_(配置文件)_</span><span class="w25">_(内存使用)_</span><span class="w25">_(运行时间)_</span></td></tr>
-<tr class="updated">
-    <td><span class="w25"><span class="mihomo-service-status">_(加载中...)_</span></span><span class="w25"><span class="mihomo-config-info">_(加载中...)_</span></span><span class="w25"><span class="mihomo-memory-info">_(加载中...)_</span></span><span class="w25"><span class="mihomo-uptime-info">_(加载中...)_</span></span></td>
-</tr>
-<tr class="updated">
+
+<tr>
     <td>
-        <span class="w25"><button class="mihomo-btn mihomo-btn-start" onclick="mihomoAction('start')" title="_(启动 Mihomo 服务)_"><i class="fa fa-play"></i> _(启动)_</button></span><span class="w25"><button class="mihomo-btn mihomo-btn-restart" onclick="mihomoAction('restart')" title="_(重启 Mihomo 服务)_"><i class="fa fa-refresh"></i> _(重启)_</button></span><span class="w25"><button class="mihomo-btn mihomo-btn-stop" onclick="mihomoAction('stop')" title="_(停止 Mihomo 服务)_"><i class="fa fa-stop"></i> _(停止)_</button></span><span class="w25"><button class="mihomo-btn mihomo-btn-ui" onclick="mihomoAction('ui')" title="_(打开 Mihomo 管理界面)_"><i class="fa fa-external-link"></i> _(打开UI)_</button></span>
+        <div class="mihomo-dash-body">
+            <!-- 左栏：指标列表 -->
+            <div class="mihomo-dash-left">
+                <!-- 运行状态 -->
+                <div class="mihomo-list-row">
+                    <div class="mihomo-list-label-col">
+                        <i class="fa fa-circle-o-notch fa-fw mihomo-icon"></i>
+                        <span>_(运行状态)_</span>
+                    </div>
+                    <div class="mihomo-list-value-col mihomo-service-status">_(加载中...)_</div>
+                </div>
+                
+                <!-- 配置文件 -->
+                <div class="mihomo-list-row">
+                    <div class="mihomo-list-label-col">
+                        <i class="fa fa-file-code-o fa-fw mihomo-icon"></i>
+                        <span>_(配置文件)_</span>
+                    </div>
+                    <div class="mihomo-list-value-col mihomo-config-info">_(加载中...)_</div>
+                </div>
+
+                <!-- 代理模式 (包含选择框切换) -->
+                <div class="mihomo-list-row">
+                    <div class="mihomo-list-label-col">
+                        <i class="fa fa-sliders fa-fw mihomo-icon"></i>
+                        <span>_(代理模式)_</span>
+                    </div>
+                    <div class="mihomo-list-value-col">
+                        <select id="mihomo_mode_select" class="mihomo-select" disabled>
+                            <option value="rule">_(规则 (Rule))_</option>
+                            <option value="global">_(全局 (Global))_</option>
+                            <option value="direct">_(直连 (Direct))_</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 实时网速 -->
+                <div class="mihomo-list-row">
+                    <div class="mihomo-list-label-col">
+                        <i class="fa fa-exchange fa-fw mihomo-icon"></i>
+                        <span>_(实时网速)_</span>
+                    </div>
+                    <div class="mihomo-list-value-col" style="font-weight: 500;">
+                        <span style="color:#27ae60;">↓ <span id="mihomo_dl_speed">0 B/s</span></span>
+                        <span style="margin: 0 4px;color:#888;">|</span>
+                        <span style="color:#e67e22;">↑ <span id="mihomo_ul_speed">0 B/s</span></span>
+                    </div>
+                </div>
+
+                <!-- 资源占用 -->
+                <div class="mihomo-list-row">
+                    <div class="mihomo-list-label-col">
+                        <i class="fa fa-hdd-o fa-fw mihomo-icon"></i>
+                        <span>_(资源占用)_</span>
+                    </div>
+                    <div class="mihomo-list-value-col">
+                        <span class="mihomo-memory-info">0 MB</span>
+                        <span style="color:#888;font-weight: normal;"> / </span>
+                        <span class="mihomo-conn-info" style="color:#17a2b8;">0 _(连接)_</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 右栏：网速实时图表 -->
+            <div class="mihomo-dash-right">
+                <div class="mihomo-chart-container">
+                    <canvas id="mihomo_speed_canvas" width="220" height="110"></canvas>
+                </div>
+                <div class="mihomo-chart-legend">
+                    <span class="legend-item dl"><span class="dot"></span>_(下载)_</span>
+                    <span class="legend-item ul"><span class="dot"></span>_(上传)_</span>
+                </div>
+            </div>
+        </div>
+    </td>
+</tr>
+
+<tr>
+    <td>
+        <div class="mihomo-btn-group">
+            <button class="mihomo-btn mihomo-btn-start" onclick="mihomoAction('start')" title="_(启动 Mihomo 服务)_"><i class="fa fa-play"></i> _(启动)_</button>
+            <button class="mihomo-btn mihomo-btn-restart" onclick="mihomoAction('restart')" title="_(重启 Mihomo 服务)_"><i class="fa fa-refresh"></i> _(重启)_</button>
+            <button class="mihomo-btn mihomo-btn-stop" onclick="mihomoAction('stop')" title="_(停止 Mihomo 服务)_"><i class="fa fa-stop"></i> _(停止)_</button>
+            <button class="mihomo-btn mihomo-btn-ui" onclick="mihomoAction('ui')" title="_(打开 Mihomo 管理界面)_"><i class="fa fa-external-link"></i> _(打开UI)_</button>
+        </div>
     </td>
 </tr>
 <tr><td><span></span></td></tr>
@@ -3131,162 +3834,442 @@ EOT;
     margin-top: 2px;
 }
 
-.mihomo-service-status {
-    font-weight: bold;
-}
-
-.mihomo-config-info {
-    font-size: 12px;
-    color: #6c757d;
-}
-
-.mihomo-memory-info {
-    font-size: 12px;
-    color: #6c757d;
-    font-weight: bold;
-}
-
-.mihomo-uptime-info {
-    font-size: 12px;
-    color: #6c757d;
-    font-weight: bold;
-}
-
-/* 确保4列等宽对齐（限定在 mihomo 组件内，避免影响其他仪表板组件） */
-#tblMihomoDash .w25 {
-    flex: 1 1 0;
-    min-width: 0;
-    text-align: center;
-    vertical-align: top;
+/* 双栏自适应布局 */
+.mihomo-dash-body {
+    display: flex;
+    flex-direction: row;
+    gap: 16px;
+    padding: 8px 16px;
     box-sizing: border-box;
-    padding: 0 2px;
+    align-items: stretch;
+}
+
+.mihomo-dash-left {
+    flex: 48;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.mihomo-dash-right {
+    flex: 52;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-left: 1px dashed var(--border-color, rgba(128, 128, 128, 0.3));
+    padding-left: 16px;
+    min-width: 0;
+}
+
+.mihomo-list-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 7px 0;
+    border-bottom: 1px dashed var(--border-color, rgba(128, 128, 128, 0.2));
+}
+
+.mihomo-list-row:last-child {
+    border-bottom: none;
+}
+
+.mihomo-list-label-col {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 1.1rem;
+    color: var(--text-muted, #666);
+}
+
+.mihomo-icon {
+    font-size: 13px;
+    color: var(--text-muted, #888);
+}
+
+.mihomo-list-value-col {
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: var(--text-color, #333);
+    text-align: right;
+    max-width: 55%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-#tblMihomoDash tr.header td,
-#tblMihomoDash tr.updated td {
+
+/* Canvas 图表容器 */
+.mihomo-chart-container {
+    position: relative;
+    width: 100%;
     display: flex;
+    justify-content: center;
 }
 
-/* 按钮样式 */
-.mihomo-btn {
-    background: #2c3e50;
-    color: white;
-    border: none;
-    padding: 6px 8px;
+#mihomo_speed_canvas {
+    max-width: 100%;
+    height: auto;
+    display: block;
+}
+
+/* 图例样式 */
+.mihomo-chart-legend {
+    display: flex;
+    gap: 12px;
+    margin-top: 6px;
+    font-size: 10px;
+    color: var(--text-muted, #888);
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.legend-item .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.legend-item.dl .dot {
+    background-color: #27ae60;
+}
+
+.legend-item.ul .dot {
+    background-color: #e67e22;
+}
+
+/* 下拉菜单 (Select) 样式：完美自适应适配 Unraid 原生主题 */
+.mihomo-select {
+    font-size: 11px;
+    font-weight: bold;
+    color: var(--button-text-color, #333);
+    background: var(--button-background, #f2f2f2);
+    border: var(--button-border, 1px solid #ccc);
+    padding: 3px 20px 3px 8px;
     border-radius: 4px;
     cursor: pointer;
+    outline: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 10 6"><path fill="%23666" d="M0 0h10L5 6z"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 6px center;
+    transition: all 0.2s ease;
+}
+
+.mihomo-select:hover:not([disabled]) {
+    border-color: var(--brand-orange, #e67e22);
+}
+
+.mihomo-select[disabled] {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* 按钮操作组布局 */
+.mihomo-btn-group {
+    display: flex;
+    gap: 8px;
+    padding: 0 16px 12px 16px;
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.mihomo-btn {
+    position: relative;
+    flex: 1;
+    height: 32px;
+    border: none;
+    border-radius: 6px;
+    background: transparent !important;
+    color: #fb8c00 !important;
     font-size: 12px;
     font-weight: bold;
-    transition: all 0.3s ease;
-    width: 100%;
-    white-space: nowrap;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    z-index: 1;
+    transition: all 0.2s ease-in-out;
 }
 
-.mihomo-btn:hover {
-    opacity: 0.8;
-    transform: translateY(-1px);
-}
-
-.mihomo-btn:active {
-    transform: translateY(0);
+/* 使用遮罩混合 (mask-composite) 实现圆角渐变边框，100% 浏览器兼容，背景完全透明 */
+.mihomo-btn::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 6px;
+    padding: 1.5px; /* 边框厚度 */
+    background: linear-gradient(to right, #e74c3c, #fb8c00);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    z-index: -1;
+    transition: all 0.2s ease-in-out;
 }
 
 .mihomo-btn i {
-    margin-right: 4px;
+    font-size: 11px;
+    color: #fb8c00 !important;
+    transition: all 0.2s ease-in-out;
 }
 
-.mihomo-btn-start {
-    background: #28a745;
+/* 悬停状态：填充红橙渐变背景，文字图标反色为白，隐去边框 */
+.mihomo-btn:hover {
+    background: linear-gradient(to right, #e74c3c, #fb8c00) !important;
+    color: #fff !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(231, 76, 60, 0.2);
 }
 
-.mihomo-btn-restart {
-    background: #ffc107;
-    color: #212529;
+.mihomo-btn:hover::before {
+    opacity: 0;
 }
 
-.mihomo-btn-stop {
-    background: #dc3545;
+.mihomo-btn:hover i {
+    color: #fff !important;
 }
 
-.mihomo-btn-ui {
-    background: #17a2b8;
+.mihomo-btn:active {
+    transform: scale(0.97) translateY(0);
+    box-shadow: 0 2px 5px rgba(231, 76, 60, 0.1);
 }
 
 </style>
 
 <script type="text/javascript" src="/plugins/easy-mihomo/scripts/mihomo-dashboard.js"></script>
 <script type="text/javascript">
+// 全局网速历史队列 (预留 16 个点，确保滚动时右边界无缝闭合)
+window.mihomoSpeedHistory = { dl: [], ul: [] };
+window.mihomoLatestSpeed = { dl: 0, ul: 0 }; // 最新获取到的实际目标网速
+window.mihomoLastFrameTime = Date.now();     // 上一帧渲染时间戳，用于计算 delta-time
+window.mihomoChartOffset = 0;                 // 实时匀速滑动像素偏移量
+
+// 格式化网速文本（用于 Canvas 刻度）
+function formatSpeedText(bytes) {
+    if (bytes < 1024) return bytes + ' B/s';
+    var k = 1024;
+    var sizes = ['B/s', 'kB/s', 'MB/s', 'GB/s'];
+    var i = Math.floor(Math.log(bytes) / Math.log(k));
+    i = Math.min(i, sizes.length - 1);
+    var val = bytes / Math.pow(k, i);
+    return (val < 10 ? val.toFixed(1) : Math.round(val)) + ' ' + sizes[i];
+}
+
+// 绘制网速折线阴影曲线图
+function drawSpeedChart() {
+    var canvas = document.getElementById('mihomo_speed_canvas');
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+    var width = canvas.width;
+    var height = canvas.height;
+    
+    // 清除画布
+    ctx.clearRect(0, 0, width, height);
+    
+    var dlHistory = window.mihomoSpeedHistory.dl;
+    var ulHistory = window.mihomoSpeedHistory.ul;
+    var pointsCount = dlHistory.length;
+    if (pointsCount === 0) return;
+    
+    // 计算历史数据中的最大速度，作为 Y 轴量程依据（最小刻度 1 kB/s = 1024 B/s）
+    var maxVal = 1024;
+    for (var i = 0; i < pointsCount; i++) {
+        if (dlHistory[i] > maxVal) maxVal = dlHistory[i];
+        if (ulHistory[i] > maxVal) maxVal = ulHistory[i];
+    }
+    
+    // 绘图边距与布局设置 (左侧留出 42px 展示网速自适应刻度)
+    var leftMargin = 42;
+    var rightMargin = 2;
+    var topMargin = 6;
+    var bottomMargin = 6;
+    
+    var drawWidth = width - leftMargin - rightMargin;
+    var drawHeight = height - topMargin - bottomMargin;
+    
+    // 1. 动态获取系统当前主题下的 CSS 变量真实颜色值，防止 Canvas 无法解析 CSS 变量字符串
+    var tempEl = $('<span style="display:none;color:var(--text-muted, #888);border:1px solid var(--border-color, rgba(128,128,128,0.15));"></span>').appendTo('body');
+    var textColor = tempEl.css('color') || '#888';
+    var borderColor = tempEl.css('border-top-color') || 'rgba(128, 128, 128, 0.15)';
+    tempEl.remove();
+
+    // 2. 绘制 5 条静态水平刻度虚线 & 左侧刻度文字 (静态绘制，不受动画滚动影响)
+    var gridLevels = [0, 0.25, 0.5, 0.75, 1]; // 0是最顶格(100%), 1是最低线(0%)
+    ctx.strokeStyle = borderColor;
+    ctx.lineWidth = 1;
+    ctx.fillStyle = textColor;
+    ctx.font = '8px sans-serif';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    
+    for (var g = 0; g < gridLevels.length; g++) {
+        var level = gridLevels[g];
+        var gy = topMargin + drawHeight * level;
+        
+        // 绘制水平虚线 (从 leftMargin 到最右边)
+        ctx.beginPath();
+        ctx.setLineDash([3, 3]);
+        ctx.moveTo(leftMargin, gy);
+        ctx.lineTo(width - rightMargin, gy);
+        ctx.stroke();
+        ctx.setLineDash([]); // 还原实线
+        
+        // 绘制刻度数值
+        var speedVal = maxVal * (1 - level);
+        var labelText = (speedVal === 0) ? '0 B/s' : formatSpeedText(speedVal);
+        ctx.fillText(labelText, leftMargin - 4, gy);
+    }
+    
+    // 计算 X 轴步长 (仅在绘图区内，固定 15 个区间)
+    var xStep = drawWidth / (15 - 1);
+    
+    // 3. 绘制面积曲线的通用函数 (启用局域裁剪，防止向左滚动时溢出左边界遮挡刻度)
+    function drawLineAndArea(history, strokeColor, fillColor) {
+        if (history.length < 2) return;
+        var points = [];
+        for (var idx = 0; idx < history.length; idx++) {
+            // 所有点的 x 坐标均向左偏移当前累加值
+            var px = leftMargin + idx * xStep - window.mihomoChartOffset;
+            var py = topMargin + drawHeight * (1 - (history[idx] / maxVal));
+            points.push({ x: px, y: py });
+        }
+        
+        // 开启 Canvas 剪裁，强制只在绘图区内渲染波形
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(leftMargin, topMargin, drawWidth, drawHeight);
+        ctx.clip();
+        
+        // 绘制折线
+        ctx.beginPath();
+        ctx.moveTo(points[0].x, points[0].y);
+        for (var idx = 1; idx < points.length; idx++) {
+            ctx.lineTo(points[idx].x, points[idx].y);
+        }
+        ctx.strokeStyle = strokeColor;
+        ctx.lineWidth = 1.5;
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+        ctx.stroke();
+        
+        // 闭合区域绘制半透明填充 (底部闭合在 topMargin + drawHeight 线段上)
+        ctx.lineTo(points[points.length - 1].x, topMargin + drawHeight);
+        ctx.lineTo(points[0].x, topMargin + drawHeight);
+        ctx.closePath();
+        ctx.fillStyle = fillColor;
+        ctx.fill();
+        
+        ctx.restore(); // 还原状态，避免影响后续其他操作
+    }
+    
+    // 先绘制下载曲线 (绿色)
+    drawLineAndArea(dlHistory, '#27ae60', 'rgba(39, 174, 96, 0.15)');
+    
+    // 后绘制上传曲线 (橙色)
+    drawLineAndArea(ulHistory, '#e67e22', 'rgba(230, 126, 34, 0.12)');
+}
+
 function refreshMihomoDashboard() {
     $.getJSON('/plugins/easy-mihomo/api.php?cmd=dashboard_status', function(data) {
         if (data) {
-            // 保存API数据到全局变量，供其他函数使用
             window.mihomoLastData = data;
             
-            // 更新状态显示
             var statusIcon = $('.mihomo-status-icon');
             var statusText = $('.mihomo-status-text');
             var versionText = $('#mihomo-version');
             var serviceStatus = $('.mihomo-service-status');
             var configInfo = $('.mihomo-config-info');
             var memoryInfo = $('.mihomo-memory-info');
-            var uptimeInfo = $('.mihomo-uptime-info');
+            var connInfo = $('.mihomo-conn-info');
+            var dlSpeed = $('#mihomo_dl_speed');
+            var ulSpeed = $('#mihomo_ul_speed');
+            var modeSelect = $('#mihomo_mode_select');
             
             // 状态图标和文本
             statusIcon.removeClass('running stopped loading').addClass(data.running ? 'running' : 'stopped');
             statusText.text(data.running ? _('运行中') : _('已停止'));
-            
-            // 顶部版本信息
             versionText.text(_('版本: ') + (data.version || _('未知')));
             
-            // 运行状态
+            // 运行状态行
             if (data.running) {
                 serviceStatus.html('<span style="color:#28a745;font-weight:bold;">' + _('运行中') + '</span>');
+                modeSelect.prop('disabled', false);
             } else {
                 serviceStatus.html('<span style="color:#dc3545;font-weight:bold;">' + _('已停止') + '</span>');
+                modeSelect.prop('disabled', true);
             }
             
             // 配置文件信息
             if (data.config && data.config.has_config) {
                 var configName = data.config.selected_config || _('未知');
-                configInfo.html('<span style="color:#28a745;">' + configName + '</span>');
+                configInfo.html('<span style="color:var(--text-color, #333);font-weight:bold;">' + configName + '</span>');
             } else {
                 configInfo.html('<span style="color:#dc3545;">' + _('未选择配置') + '</span>');
             }
             
-            // 内存使用信息
-            if (data.running && data.memory) {
-                memoryInfo.html('<span style="color:#17a2b8;">' + data.memory + '</span>');
-            } else {
-                memoryInfo.html('<span style="color:#6c757d;">' + _('未知') + '</span>');
+            // 代理模式下拉菜单同步
+            if (data.running && data.mode) {
+                window.mihomoUpdatingSelect = true;
+                modeSelect.val(data.mode);
+                window.mihomoUpdatingSelect = false;
             }
             
-            // 运行时间信息
-            if (data.running && data.uptime) {
-                uptimeInfo.html('<span style="color:#28a745;">' + data.uptime + '</span>');
+            // 实时速度同步，此处仅更新目标最新数据值，由独立动画时钟主导压入和移位，规避网络延迟卡顿
+            var dlRaw = 0, ulRaw = 0;
+            if (data.running) {
+                dlSpeed.text(data.download_speed || '0 B/s');
+                ulSpeed.text(data.upload_speed || '0 B/s');
+                dlRaw = typeof data.download_speed_raw !== 'undefined' ? parseInt(data.download_speed_raw) : 0;
+                ulRaw = typeof data.upload_speed_raw !== 'undefined' ? parseInt(data.upload_speed_raw) : 0;
             } else {
-                uptimeInfo.html('<span style="color:#6c757d;">' + _('未知') + '</span>');
+                dlSpeed.text('0 B/s');
+                ulSpeed.text('0 B/s');
+            }
+            
+            // 存储目标值，供滑动循环平滑读入
+            window.mihomoLatestSpeed.dl = dlRaw;
+            window.mihomoLatestSpeed.ul = ulRaw;
+            
+            // 资源占用同步
+            if (data.running) {
+                memoryInfo.html('<span style="color:var(--text-color, #333);font-weight:bold;">' + (data.memory || '0 MB') + '</span>');
+                connInfo.html('<span style="color:#17a2b8;font-weight:bold;">' + (data.connections || 0) + '</span> ' + _('连接'));
+            } else {
+                memoryInfo.html('<span style="color:#6c757d;">' + _('未知') + '</span>');
+                connInfo.html('<span style="color:#6c757d;">0</span> ' + _('连接'));
             }
         }
     }).fail(function() {
-        // 更新失败时的显示
         $('.mihomo-status-icon').removeClass('running stopped').addClass('loading');
         $('.mihomo-status-text').text(_('状态: 错误'));
         $('.mihomo-service-status').text(_('错误'));
         $('.mihomo-config-info').text(_('错误'));
+        $('#mihomo_mode_select').prop('disabled', true);
+        $('#mihomo_dl_speed').text('0 B/s');
+        $('#mihomo_ul_speed').text('0 B/s');
         $('.mihomo-memory-info').text(_('错误'));
-        $('.mihomo-uptime-info').text(_('错误'));
+        $('.mihomo-conn-info').html('0 ' + _('连接'));
+        
+        window.mihomoLatestSpeed.dl = 0;
+        window.mihomoLatestSpeed.ul = 0;
     });
 }
 
-// 按钮操作函数
 function mihomoAction(action) {
     switch(action) {
         case 'start':
         case 'stop':
         case 'restart':
-            // 静默处理操作，不跳转页面
             var actionText = '';
             switch(action) {
                 case 'start': actionText = _('启动'); break;
@@ -3294,26 +4277,21 @@ function mihomoAction(action) {
                 case 'restart': actionText = _('重启'); break;
             }
             
-            // 显示操作状态
             $('.mihomo-status-text').text(_('状态: ') + actionText + _('中...'));
             $('.mihomo-status-icon').removeClass('running stopped').addClass('loading');
+            $('#mihomo_mode_select').prop('disabled', true);
             
-            // 发送操作请求
             $.get('/plugins/easy-mihomo/api.php?cmd=' + action, function(response) {
-                // 操作完成后刷新状态
                 setTimeout(function() {
                     refreshMihomoDashboard();
                 }, 1000);
             }).fail(function() {
-                // 操作失败时显示错误
                 $('.mihomo-status-text').text(_('状态: 操作失败'));
                 $('.mihomo-status-icon').removeClass('running stopped loading').addClass('stopped');
             });
             break;
         case 'ui':
-            // 打开控制台UI
             var currentHostname = window.location.hostname;
-            // 从API数据中获取端口信息
             var port = null;
             if (window.mihomoLastData && window.mihomoLastData.config && window.mihomoLastData.config.port) {
                 port = window.mihomoLastData.config.port;
@@ -3330,12 +4308,70 @@ function mihomoAction(action) {
     }
 }
 
-// 页面加载时立即刷新一次
 $(document).ready(function() {
-    refreshMihomoDashboard();
+    $('#mihomo_mode_select').on('change', function() {
+        if (window.mihomoUpdatingSelect) return;
+        var selectedMode = $(this).val();
+        var selectEl = $(this);
+        
+        selectEl.prop('disabled', true);
+        $.get('/plugins/easy-mihomo/api.php?cmd=set_mode&mode=' + selectedMode, function(response) {
+            setTimeout(function() {
+                refreshMihomoDashboard();
+            }, 800);
+        }).fail(function() {
+            alert(_('设置代理模式失败，请重试'));
+            selectEl.prop('disabled', false);
+        });
+    });
+
+    // 预填充满 16 个点以让折线从右侧平滑滑入，视觉更好
+    for (var i = 0; i < 16; i++) {
+        window.mihomoSpeedHistory.dl.push(0);
+        window.mihomoSpeedHistory.ul.push(0);
+    }
+
+    // Canvas 匀速滑动渲染主循环 (25 FPS, 使用完全独立的 Delta-time 时钟驱动，彻底平滑网络请求延迟)
+    function renderLoop() {
+        var now = Date.now();
+        var deltaTime = now - window.mihomoLastFrameTime;
+        window.mihomoLastFrameTime = now;
+        
+        var canvas = document.getElementById('mihomo_speed_canvas');
+        if (canvas) {
+            var leftMargin = 42;
+            var rightMargin = 2;
+            var drawWidth = canvas.width - leftMargin - rightMargin;
+            var xStep = drawWidth / (15 - 1); // 14个折线网格跨度
+            
+            // 匀速流动速度：每 2000 毫秒需要完整滚动过 1 个格子宽度（xStep）
+            var speed = xStep / 2000;
+            window.mihomoChartOffset += speed * deltaTime;
+            
+            // 当滑动累积超过 1 个格子时，将历史点移位，并压入当前的最新数值
+            while (window.mihomoChartOffset >= xStep) {
+                window.mihomoChartOffset -= xStep;
+                
+                window.mihomoSpeedHistory.dl.shift();
+                window.mihomoSpeedHistory.ul.shift();
+                
+                window.mihomoSpeedHistory.dl.push(window.mihomoLatestSpeed.dl);
+                window.mihomoSpeedHistory.ul.push(window.mihomoLatestSpeed.ul);
+            }
+            
+            // 执行重绘
+            drawSpeedChart();
+        }
+        
+        window.requestAnimationFrame(renderLoop);
+    }
     
-    // 每5秒刷新一次
-    setInterval(refreshMihomoDashboard, 5000);
+    // 初始化时间戳并启动渲染
+    window.mihomoLastFrameTime = Date.now();
+    window.requestAnimationFrame(renderLoop);
+
+    refreshMihomoDashboard();
+    setInterval(refreshMihomoDashboard, 2000); // 每 2 秒异步刷新一次数据源
 });
 </script>
 ]]></INLINE>
