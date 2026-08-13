@@ -1,6 +1,6 @@
-# Easy-Mihomo for Unraid and fnos
+# Easy-Mihomo for Unraid
 
-一个为 Unraid和fnos系统设计的 Mihomo Web 管理插件。
+一个为 Unraid 系统设计的 Mihomo 代理客户端插件，提供简单易用的 Web 管理界面。
 
 ## 技术支持
 
@@ -25,7 +25,7 @@
 - Unraid 6.12.0 或更高版本
 - 至少 50MB 可用空间
 
-## unraid安装方法
+## 安装方法
 
 ### 通过 URL 安装
 
@@ -36,22 +36,6 @@
    https://raw.githubusercontent.com/wlaosj/easy-mihomo/refs/heads/main/mihomo.plg
    ```
 4. 点击 **"Install"** 开始安装
-
-## 飞牛NAS安装方法
-
-### 通过离线安装包安装
-
-1. 下载离线安装包：
-   - [点击跳转](https://github.com/wlaosj/easy-mihomo/releases) - 获取插件安装包
-
-2. 在飞牛NAS中安装：
-   - 打开飞牛NAS的应用中心
-   - 点击 **"离线安装"** 或 **"本地安装"**
-   - 选择下载的 `easy-mihomo-fnos` 文件
-   - 点击 **"安装"** 开始安装
-
-3. 安装完成后：
-   - 在应用中心找到 **Easy-Mihomo** 应用
 
 ## 使用指南
 
@@ -143,6 +127,13 @@
 1. 在 Unraid 插件页面找到 **Easy-Mihomo**
 2. 点击 **"Remove"** 按钮
 3. 确认卸载，所有相关文件将被清理
+
+## 致谢与开源声明
+
+本插件的开发与运行离不开以下优秀开源项目的支持，在此表示衷心的感谢：
+
+- **Mihomo (MetaCubeX)**：强大的代理核心引擎。 [GitHub 仓库](https://github.com/MetaCubeX/mihomo)
+- **Zashboard (Zephyruso)**：现代美观的 Web 控制面板。 [GitHub 仓库](https://github.com/Zephyruso/zashboard)
 
 ---
 
