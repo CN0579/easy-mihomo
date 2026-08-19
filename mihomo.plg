@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name      "easy-mihomo">
 <!ENTITY author    "bigv">
-<!ENTITY version   "1.2.3">
+<!ENTITY version   "1.2.4">
 <!ENTITY launch    "Settings/EasyMihomo.Main">
 <!ENTITY sourceDir "/boot/config/plugins/easy-mihomo">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/wlaosj/easy-mihomo/refs/heads/main/mihomo.plg">
@@ -14,6 +14,12 @@
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" min="6.12.0" support="https://t.me/+7jcTMePlNVwwZjg1" icon="icon-network">
 
 <CHANGES>
+1.2.4  日志与内存防护重大修复
+- 修复：设置页面统计日志行数改用 wc -l 底层流式统计，彻底杜绝大日志导致的 PHP 内存溢出（白屏）问题
+- 修复：日志清理改用内存变量暂存后原地截断，彻底解决 Unraid /var/log 内存盘 100% 满盘时写临时文件失败导致的清理死锁
+- 优化：定时日志清理巡检频率提升为每 30 分钟一次（超过 2MB 自动截断保留最近 1000 行），更及时控制磁盘占用
+- 优化：仪表盘代码结构优化，精简未使用的日志读取逻辑以降低系统 I/O 开销
+
 1.2.3  修复与稳定性提升
 - 修复：日志轮转改用原地截断写入（copytruncate），保持 Inode 不变，彻底解决常驻进程持有已删除句柄导致的 /var/log 内存泄漏及 WebUI 日志停止更新问题
 - 优化：完善开发技术规范与文档致谢
@@ -139,9 +145,13 @@ esac
 
 # 如果文件超过大小限制，进行清理
 if [ "$FILE_SIZE" -gt "$MAX_BYTES" ]; then
-    echo "[$(date)] 日志文件过大 (${FILE_SIZE} bytes)，开始清理..." >> "$LOG_FILE"
-    # 保留最后KEEP_LINES行（使用原地截断写入保留原有 Inode，防止常驻进程句柄指向 deleted 文件造成内存泄漏）
-    tail -n "$KEEP_LINES" "$LOG_FILE" > "${LOG_FILE}.tmp" && cat "${LOG_FILE}.tmp" > "$LOG_FILE" && rm -f "${LOG_FILE}.tmp"
+    # 改为内存缓冲直接截断，杜绝磁盘 100% 满载时写临时文件失败的死锁
+    LINES=$(tail -n "$KEEP_LINES" "$LOG_FILE" 2>/dev/null)
+    if [ -n "$LINES" ]; then
+        printf "%s\n" "$LINES" > "$LOG_FILE"
+    else
+        : > "$LOG_FILE"
+    fi
     echo "[$(date)] 日志清理完成，保留最近 $KEEP_LINES 行" >> "$LOG_FILE"
 fi
 LOGCLEANEOF
@@ -387,13 +397,13 @@ DASHEOF
 chmod +x "/usr/local/emhttp/plugins/easy-mihomo/scripts/mihomo-dashboard.js"
 echo "  ✓ 仪表板JavaScript文件已创建"
 
-# 添加定时任务（每天凌晨2点清理）
+# 添加定时任务（每30分钟检查一次）
 echo "  - 正在设置定时清理任务..."
 # 移除旧的定时任务
 crontab -l 2>/dev/null | grep -v "mihomo.*log_cleanup" | crontab - 2>/dev/null || true
-# 添加新的定时任务（每6小时检查一次）
-(crontab -l 2>/dev/null; echo "0 */6 * * * /usr/local/emhttp/plugins/easy-mihomo/scripts/log_cleanup.sh >/dev/null 2>&1") | crontab - 2>/dev/null || true
-echo "  ✓ 定时清理任务已设置（每6小时检查一次）"
+# 添加新的定时任务（每30分钟检查一次）
+(crontab -l 2>/dev/null; echo "*/30 * * * * /usr/local/emhttp/plugins/easy-mihomo/scripts/log_cleanup.sh >/dev/null 2>&1") | crontab - 2>/dev/null || true
+echo "  ✓ 定时清理任务已设置（每30分钟检查一次）"
 
 # 安装阶段完成（核心/UI 下载改为页面手动触发）
 echo "✓ 插件基础文件部署完成（未自动下载核心与UI）"
@@ -767,7 +777,12 @@ if (file_exists($versionFile)) {
 // 获取日志文件信息
 $logSize = file_exists($logFile) ? filesize($logFile) : 0;
 $logSizeFormatted = formatBytes($logSize);
-$logLines = file_exists($logFile) ? count(file($logFile)) : 0;
+$logLines = 0;
+if (file_exists($logFile) && is_readable($logFile)) {
+  $out = [];
+  @exec("wc -l < " . escapeshellarg($logFile) . " 2>/dev/null", $out);
+  $logLines = isset($out[0]) ? intval(trim($out[0])) : 0;
+}
 
 // 处理上传重定向返回的消息
 if (isset($_GET['uploadmsg']) && $_GET['uploadmsg'] !== '') {
@@ -3664,22 +3679,10 @@ function getMihomoConfig() {
 
 // 获取日志信息
 function getMihomoLogInfo() {
-    $logFile = '/var/log/mihomo.log';
-    $logSize = file_exists($logFile) ? filesize($logFile) : 0;
-    $logLines = file_exists($logFile) ? count(file($logFile)) : 0;
-    
-    function formatBytes($size, $precision = 2) {
-        $units = array('B', 'KB', 'MB', 'GB', 'TB');
-        for ($i = 0; $size > 1024 && $i < count($units) - 1; $i++) {
-            $size /= 1024;
-        }
-        return round($size, $precision) . ' ' . $units[$i];
-    }
-    
     return [
-        'size' => formatBytes($logSize),
-        'lines' => $logLines,
-        'exists' => file_exists($logFile)
+        'size' => 0,
+        'lines' => 0,
+        'exists' => false
     ];
 }
 
