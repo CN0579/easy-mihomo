@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name      "easy-mihomo">
 <!ENTITY author    "bigv">
-<!ENTITY version   "1.2.4">
+<!ENTITY version   "1.2.5">
 <!ENTITY launch    "Settings/EasyMihomo.Main">
 <!ENTITY sourceDir "/boot/config/plugins/easy-mihomo">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/wlaosj/easy-mihomo/refs/heads/main/mihomo.plg">
@@ -14,6 +14,14 @@
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" min="6.12.0" support="https://t.me/+7jcTMePlNVwwZjg1" icon="icon-network">
 
 <CHANGES>
+1.2.5  AIO 虚拟机网桥隔离与高可用检测升级
+- 新增：AIO 虚拟机网桥隔离功能（关闭宿主 net.bridge.bridge-nf-call-iptables），彻底解决同网桥下爱快、飞牛 NAS、Windows 等虚拟机二层流量与 DNS 被宿主 Mihomo 误拦截的问题
+- 新增：WebUI 服务控制卡片增加 AIO 网桥隔离独立开关与即时生效交互，支持开机引导脚本协同持久化与卸载自动还原
+- 优化：升级为 302 重定向 + GitHub API + 国内加速镜像的“4 重高可用”版本检测架构，彻底突破 GitHub API 60次/小时速率限制与国内网络超时问题
+- 优化：核心引擎与 UI 控制面板下载链路增加国内镜像自动故障转移加速，大幅提升国内下载稳定性
+- 优化：修正核心与 UI 手动安装提示文案（提供直达链接与内核解压避坑提示），修正日志清理巡检周期描述（每 30 分钟）
+- 体验：WebUI 复选框严格限制仅点击勾选框触发，说明图标升级为即时响应式悬浮卡片
+
 1.2.4  日志与内存防护重大修复
 - 修复：设置页面统计日志行数改用 wc -l 底层流式统计，彻底杜绝大日志导致的 PHP 内存溢出（白屏）问题
 - 修复：日志清理改用内存变量暂存后原地截断，彻底解决 Unraid /var/log 内存盘 100% 满盘时写临时文件失败导致的清理死锁
@@ -487,11 +495,19 @@ define('LANG_STRINGS', [
   'select_config'   => ['cn' => '请选择配置文件', 'en' => 'Select configuration'],
 
   // Tips
-  'tip_manual_core' => ['cn' => '手动安装：从 GitHub Releases 下载，放到', 'en' => 'Manual: download from GitHub Releases, place at'],
-  'tip_manual_ui'   => ['cn' => '下载 zashboard dist.zip，重命名为 zashboard.zip 放到插件目录', 'en' => 'Download zashboard dist.zip, rename to zashboard.zip and place in plugin directory'],
+  'tip_manual_core' => [
+    'cn' => '手动安装：从 <a href="https://github.com/MetaCubeX/mihomo/releases" target="_blank" style="color:var(--mih-accent);text-decoration:underline;">GitHub Releases</a> 下载对应架构内核，解压后重命名为 <code>mihomo</code> 放入 <code>/boot/config/plugins/easy-mihomo/</code>',
+    'en' => 'Manual: Download binary from <a href="https://github.com/MetaCubeX/mihomo/releases" target="_blank" style="color:var(--mih-accent);text-decoration:underline;">GitHub Releases</a>, extract and rename to <code>mihomo</code>, place at <code>/boot/config/plugins/easy-mihomo/</code>'
+  ],
+  'tip_manual_ui'   => [
+    'cn' => '手动安装：从 <a href="https://github.com/Zephyruso/zashboard/releases" target="_blank" style="color:var(--mih-accent);text-decoration:underline;">Zashboard Releases</a> 下载 <code>dist.zip</code>，重命名为 <code>zashboard.zip</code> 放入 <code>/boot/config/plugins/easy-mihomo/</code>',
+    'en' => 'Manual: Download <code>dist.zip</code> from <a href="https://github.com/Zephyruso/zashboard/releases" target="_blank" style="color:var(--mih-accent);text-decoration:underline;">Zashboard Releases</a>, rename to <code>zashboard.zip</code> and place at <code>/boot/config/plugins/easy-mihomo/</code>'
+  ],
+  'cleanup_value'   => ['cn' => '每30分钟 + 启动时', 'en' => 'Every 30m + on startup'],
   'tip_no_config'   => ['cn' => '没有配置文件？加入电报群获取模板', 'en' => 'No config? Join Telegram for templates'],
-  'cleanup_value'   => ['cn' => '每6小时 + 启动时', 'en' => 'Every 6h + on startup'],
   'auto_start'      => ['cn' => '开机自动启动', 'en' => 'Auto-start on boot'],
+  'aio_bridge_isolation' => ['cn' => 'AIO 虚拟机网桥隔离', 'en' => 'AIO Bridge Isolation'],
+  'tip_bridge_isolation' => ['cn' => '关闭宿主机 net.bridge.bridge-nf-call-iptables，防止爱快、飞牛等虚拟机流量被宿主意外拦截（多合一环境推荐开启）', 'en' => 'Disable host bridge netfilter to prevent VM traffic from being intercepted by host (recommended for AIO)'],
 
   // Install status
   'err_no_core'     => ['cn' => '核心未安装，点击下方"下载"按钮', 'en' => 'Core not installed. Click "Download" below.'],
@@ -506,7 +522,7 @@ define('LANG_STRINGS', [
   'save_tip'        => ['cn' => '保存将直接覆盖所选配置（上限 1MB）。', 'en' => 'Save will overwrite the selected config (max 1MB).'],
   'no_config_tip'   => ['cn' => '尚未选择配置文件。', 'en' => 'No config file selected.'],
   'log_viewer'      => ['cn' => '日志查看器', 'en' => 'Log Viewer'],
-  'log_auto_clean'  => ['cn' => '自动清理：每6小时 + 启动时 | 超过2MB保留最近1000行', 'en' => 'Auto cleanup: every 6h + startup | keep last 1000 lines when >2MB'],
+  'log_auto_clean'  => ['cn' => '自动清理：每30分钟 + 启动时 | 超过2MB保留最近1000行', 'en' => 'Auto cleanup: every 30m + startup | keep last 1000 lines when >2MB'],
   'close'           => ['cn' => '关闭',       'en' => 'Close'],
   'refresh_log'     => ['cn' => '刷新日志',   'en' => 'Refresh'],
   'clear_log'       => ['cn' => '清空日志',   'en' => 'Clear'],
@@ -795,27 +811,47 @@ $available = array_values(array_filter(scandir($confDir) ?: [], function($f) use
   return is_file($confDir . '/' . $f) && preg_match('/\.(ya?ml)$/i', $f);
 }));
 
-// 开机即启动（不依赖阵列）设置
-$bootFlag = '/boot/config/plugins/easy-mihomo/bootstart.enabled';
-if ($cmd === 'set_bootstart') {
-  $enable = ($_POST['enable'] ?? '') === '1';
+// 同步更新 /boot/config/go 引导脚本（开机自启与网桥隔离协同管理）
+function syncMihomoBootScript($bootFlag, $bridgeIsoFlag) {
   $goPath = '/boot/config/go';
   $begin = "# BEGIN easy-mihomo (do not edit)";
   $end   = "# END easy-mihomo";
+  $hasBoot = file_exists($bootFlag);
+  $hasBridgeIso = file_exists($bridgeIsoFlag);
+
+  $go = file_exists($goPath) ? @file_get_contents($goPath) : "";
+
+  // 如果两者都未开启，从 go 文件中清理移除该 block
+  if (!$hasBoot && !$hasBridgeIso) {
+    if ($go !== "" && strpos($go, $begin) !== false) {
+      $pattern = sprintf('/%s[\s\S]*?%s\n?/m', preg_quote($begin, '/'), preg_quote($end, '/'));
+      $newGo = preg_replace($pattern, '', $go, 1);
+      if ($newGo !== null) @file_put_contents($goPath, $newGo);
+    }
+    return;
+  }
+
+  // 只要任意一个开启，就生成/更新引导 block
   $block = $begin . "\n" .
     "(\n" .
     "cat <<'EOF' >/tmp/easy-mihomo-boot.sh\n" .
     "#!/bin/bash\n" .
     "FLAG=\"/boot/config/plugins/easy-mihomo/bootstart.enabled\"\n" .
+    "BRIDGE_FLAG=\"/boot/config/plugins/easy-mihomo/bridge_isolation.enabled\"\n" .
     "START_SH=\"/usr/local/emhttp/plugins/easy-mihomo/scripts/start.sh\"\n" .
     "LOG=\"/var/log/mihomo.log\"\n" .
-    "for i in \$(seq 1 60); do\n" .
-    "  if [ -x \"\$START_SH\" ]; then break; fi\n" .
-    "  sleep 1\n" .
-    "done\n" .
-    "if [ -f \"\$FLAG\" ] && [ -x \"\$START_SH\" ]; then\n" .
-    "  echo \"[easy-mihomo] boot detected, starting service...\" >> \"\$LOG\" 2>&1\n" .
-    "  bash \"\$START_SH\" >> \"\$LOG\" 2>&1 || true\n" .
+    "if [ -f \"\$BRIDGE_FLAG\" ]; then\n" .
+    "  sysctl -w net.bridge.bridge-nf-call-iptables=0 net.bridge.bridge-nf-call-ip6tables=0 net.bridge.bridge-nf-call-arptables=0 >/dev/null 2>&1 || true\n" .
+    "fi\n" .
+    "if [ -f \"\$FLAG\" ]; then\n" .
+    "  for i in \$(seq 1 60); do\n" .
+    "    if [ -x \"\$START_SH\" ]; then break; fi\n" .
+    "    sleep 1\n" .
+    "  done\n" .
+    "  if [ -x \"\$START_SH\" ]; then\n" .
+    "    echo \"[easy-mihomo] boot detected, starting service...\" >> \"\$LOG\" 2>&1\n" .
+    "    bash \"\$START_SH\" >> \"\$LOG\" 2>&1 || true\n" .
+    "  fi\n" .
     "fi\n" .
     "rm -f /tmp/easy-mihomo-boot.sh\n" .
     "EOF\n" .
@@ -823,31 +859,50 @@ if ($cmd === 'set_bootstart') {
     ")\n" .
     $end . "\n";
 
+  if (strpos($go, $begin) !== false && strpos($go, $end) !== false) {
+    $pattern = sprintf('/%s[\s\S]*?%s\n?/m', preg_quote($begin, '/'), preg_quote($end, '/'));
+    $go = preg_replace($pattern, $block, $go, 1);
+  } else {
+    if ($go !== "" && substr($go, -1) !== "\n") $go .= "\n";
+    $go .= $block;
+  }
+  @file_put_contents($goPath, $go);
+}
+
+// 开机即启动设置
+$bootFlag = '/boot/config/plugins/easy-mihomo/bootstart.enabled';
+$bridgeIsoFlag = '/boot/config/plugins/easy-mihomo/bridge_isolation.enabled';
+
+if ($cmd === 'set_bootstart') {
+  $enable = ($_POST['enable'] ?? '') === '1';
   if ($enable) {
     if (!is_dir(dirname($bootFlag))) @mkdir(dirname($bootFlag), 0777, true);
     @file_put_contents($bootFlag, 'enabled');
-    $go = file_exists($goPath) ? @file_get_contents($goPath) : "";
-    if (strpos($go, $begin) !== false && strpos($go, $end) !== false) {
-      $pattern = sprintf('/%s[\s\S]*?%s\n?/m', preg_quote($begin, '/'), preg_quote($end, '/'));
-      $go = preg_replace($pattern, $block, $go, 1);
-    } else {
-      if ($go !== "" && substr($go, -1) !== "\n") $go .= "\n";
-      $go .= $block;
-    }
-    @file_put_contents($goPath, $go);
-    $msg = 'bootstart enabled (go injected)';
+    $msg = '开机自动启动已开启';
   } else {
     @unlink($bootFlag);
-    $go = file_exists($goPath) ? @file_get_contents($goPath) : "";
-    if ($go !== "") {
-      $pattern = sprintf('/%s[\s\S]*?%s\n?/m', preg_quote($begin, '/'), preg_quote($end, '/'));
-      $newGo = preg_replace($pattern, '', $go, 1);
-      if ($newGo !== null) @file_put_contents($goPath, $newGo);
-    }
-    $msg = 'bootstart disabled (go cleaned)';
+    $msg = '开机自动启动已关闭';
   }
+  syncMihomoBootScript($bootFlag, $bridgeIsoFlag);
 }
 $bootstartOn = file_exists($bootFlag);
+
+// AIO 虚拟机网桥隔离设置
+if ($cmd === 'set_bridge_isolation') {
+  $enable = ($_POST['enable'] ?? '') === '1';
+  if ($enable) {
+    if (!is_dir(dirname($bridgeIsoFlag))) @mkdir(dirname($bridgeIsoFlag), 0777, true);
+    @file_put_contents($bridgeIsoFlag, 'enabled');
+    @shell_exec('sysctl -w net.bridge.bridge-nf-call-iptables=0 net.bridge.bridge-nf-call-ip6tables=0 net.bridge.bridge-nf-call-arptables=0 >/dev/null 2>&1');
+    $msg = 'AIO 网桥隔离已开启（立即生效）';
+  } else {
+    @unlink($bridgeIsoFlag);
+    @shell_exec('sysctl -w net.bridge.bridge-nf-call-iptables=1 net.bridge.bridge-nf-call-ip6tables=1 net.bridge.bridge-nf-call-arptables=1 >/dev/null 2>&1');
+    $msg = 'AIO 网桥隔离已关闭（已恢复默认）';
+  }
+  syncMihomoBootScript($bootFlag, $bridgeIsoFlag);
+}
+$bridgeIsoOn = file_exists($bridgeIsoFlag);
 
 // 现在读取已选择的配置（在所有命令处理完成后）
 $selectedName = is_file($selectFile) ? trim(@file_get_contents($selectFile)) : '';
@@ -2035,18 +2090,41 @@ document.addEventListener('keydown', function(event) {
         <button onclick="executeAction('stop')" class="btn btn-red"><i class="fa fa-stop"></i> <?= t('stop') ?></button>
       </div>
       
-      <div class="startup-setting" style="margin-top:12px; border-top:1px dashed var(--border); padding-top:10px;">
+      <div class="startup-setting" style="margin-top:12px; border-top:1px dashed var(--border); padding-top:10px; display:flex; flex-direction:column; gap:10px;">
         <form method="POST" style="display:inline;margin:0;">
           <input type="hidden" name="cmd" value="set_bootstart" />
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;">
-            <input type="checkbox" name="enable" value="1" <?= $bootstartOn ? 'checked' : '' ?> onchange="this.form.submit()" style="width:16px;height:16px;" />
-            <?= t('auto_start') ?>
+          <div style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;">
+            <input type="checkbox" name="enable" value="1" <?= $bootstartOn ? 'checked' : '' ?> onchange="this.form.submit()" style="width:16px;height:16px;cursor:pointer;" />
+            <span style="user-select:none;"><?= t('auto_start') ?></span>
             <?php if ($bootstartOn): ?>
               <span class="badge badge-green" style="font-size:10px;padding:1px 6px;"><?= t('enabled') ?></span>
             <?php else: ?>
               <span class="badge badge-gray" style="font-size:10px;padding:1px 6px;"><?= t('disabled') ?></span>
             <?php endif; ?>
-          </label>
+          </div>
+        </form>
+        <form method="POST" style="display:inline;margin:0;">
+          <input type="hidden" name="cmd" value="set_bridge_isolation" />
+          <div style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;">
+            <input type="checkbox" name="enable" value="1" <?= $bridgeIsoOn ? 'checked' : '' ?> onchange="this.form.submit()" style="width:16px;height:16px;cursor:pointer;" />
+            <span style="user-select:none;"><?= t('aio_bridge_isolation') ?></span>
+            <?php if ($bridgeIsoOn): ?>
+              <span class="badge badge-green" style="font-size:10px;padding:1px 6px;"><?= t('enabled') ?></span>
+            <?php else: ?>
+              <span class="badge badge-gray" style="font-size:10px;padding:1px 6px;"><?= t('disabled') ?></span>
+            <?php endif; ?>
+            <div style="position:relative;display:inline-flex;align-items:center;">
+              <span onclick="var p=this.nextElementSibling; p.style.display=(p.style.display==='block'?'none':'block'); event.stopPropagation();" onmouseenter="this.nextElementSibling.style.display='block';" onmouseleave="this.nextElementSibling.style.display='none';" style="color:var(--mih-text-dim,#777);cursor:pointer;font-size:13px;padding:2px 4px;transition:color 0.2s;">
+                <i class="fa fa-info-circle"></i>
+              </span>
+              <div onclick="event.stopPropagation();" style="display:none;position:absolute;left:24px;top:-10px;z-index:999;width:290px;padding:10px 14px;background:var(--mih-bg-card,#fff);color:var(--mih-text,#333);border:1px solid var(--mih-border,#ddd);border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,0.15);font-size:12px;font-weight:normal;line-height:1.55;white-space:normal;user-select:text;">
+                <div style="font-weight:600;margin-bottom:4px;color:var(--mih-accent,#e67e22);display:flex;align-items:center;gap:4px;">
+                  <i class="fa fa-info-circle"></i> <?= t('aio_bridge_isolation') ?>
+                </div>
+                <?= t('tip_bridge_isolation') ?>
+              </div>
+            </div>
+          </div>
         </form>
       </div>
     </div>
@@ -2104,7 +2182,7 @@ document.addEventListener('keydown', function(event) {
       <?php endif; ?>
       <div id="progress-core" class="progress-text"></div>
       <div class="tip">
-        From <a href="https://github.com/MetaCubeX/mihomo/releases" target="_blank">GitHub Releases</a> <?= t('tip_manual_core') ?> <code>/boot/config/plugins/easy-mihomo/mihomo</code>
+        <?= t('tip_manual_core') ?>
       </div>
     </div>
 
@@ -3116,6 +3194,12 @@ if [ ! -f "$CONF_FILE" ]; then echo "配置文件缺失: $CONF_FILE" >&2; exit 1
 # 尝试加载 TUN（忽略失败）
 modprobe tun 2>/dev/null || true
 
+# 检查并应用 AIO 虚拟机网桥隔离设置
+BRIDGE_FLAG="/boot/config/plugins/easy-mihomo/bridge_isolation.enabled"
+if [ -f "$BRIDGE_FLAG" ]; then
+  sysctl -w net.bridge.bridge-nf-call-iptables=0 net.bridge.bridge-nf-call-ip6tables=0 net.bridge.bridge-nf-call-arptables=0 >/dev/null 2>&1 || true
+fi
+
 # 后台启动
 nohup "$BIN" -d "$CONF_DIR" -f "$CONF_FILE" >> "$LOG_FILE" 2>&1 &
 NEWPID=$!
@@ -3253,21 +3337,18 @@ echo "unknown"
 set -e
 
 GITHUB_REPO="MetaCubeX/mihomo"
-GITHUB_API="https://api.github.com/repos/$GITHUB_REPO/releases/latest"
-TMP_JSON="/tmp/mihomo-check-update.json"
 VERSION_FILE="/boot/config/plugins/easy-mihomo/.version"
 
-# 读取版本文件（格式：版本号|版本类型，例如：1.19.15|v3）
+# 读取本地版本（格式：版本号|版本类型，例如：1.19.15|v3）
 LOCAL_VERSION=""
 if [ -f "$VERSION_FILE" ]; then
   CONTENT=$(cat "$VERSION_FILE" 2>/dev/null | tr -d '\n\r' || echo "")
   if [ -n "$CONTENT" ]; then
-    # 提取版本号（分隔符前的部分）
     LOCAL_VERSION=$(echo "$CONTENT" | cut -d'|' -f1)
   fi
 fi
 
-# 如果版本文件不存在或为空，检查核心文件是否存在
+# 如果版本文件不存在，检查核心文件是否存在
 if [ -z "$LOCAL_VERSION" ]; then
   UDISK_BIN="/boot/config/plugins/easy-mihomo/mihomo"
   if [ -f "$UDISK_BIN" ]; then
@@ -3277,12 +3358,62 @@ if [ -z "$LOCAL_VERSION" ]; then
   fi
 fi
 
-# 获取远程最新版本（使用分段超时）
-REMOTE_VERSION=""
-if wget -q --connect-timeout=8 --read-timeout=15 --tries=2 --waitretry=2 -O "$TMP_JSON" "$GITHUB_API" 2>/dev/null; then
-  REMOTE_VERSION=$(grep -o '"tag_name"[[:space:]]*:[[:space:]]*"[^"]*"' "$TMP_JSON" | head -n1 | sed 's/.*"tag_name"[[:space:]]*:[[:space:]]*"v\?\([^"]*\)".*/\1/')
-  rm -f "$TMP_JSON"
-fi
+# 多通道高可用获取远程最新版本
+get_latest_version() {
+  local repo="$1"
+  local tag=""
+
+  # 通道 1：302 重定向 Header 解析（无 GitHub API 60次/小时限制，极速）
+  if command -v curl >/dev/null 2>&1; then
+    tag=$(curl -sIL -k -m 8 -o /dev/null -w '%{url_effective}' "https://github.com/${repo}/releases/latest" 2>/dev/null | grep -o '/tag/[^/]*$' | sed 's|/tag/||; s|^v||' || true)
+    if [ -n "$tag" ] && [ "$tag" != "latest" ]; then
+      echo "$tag"
+      return 0
+    fi
+  fi
+
+  # 通道 2：wget 抓取 Location 响应头
+  if command -v wget >/dev/null 2>&1; then
+    tag=$(wget --spider -S --timeout=8 --tries=1 "https://github.com/${repo}/releases/latest" 2>&1 | grep -i '^[[:space:]]*Location:' | head -n1 | grep -o '/tag/[^/[:space:]]*' | sed 's|/tag/||; s|^v||' || true)
+    if [ -n "$tag" ] && [ "$tag" != "latest" ]; then
+      echo "$tag"
+      return 0
+    fi
+  fi
+
+  # 通道 3：官方 GitHub API
+  local api_url="https://api.github.com/repos/${repo}/releases/latest"
+  local json=""
+  if command -v curl >/dev/null 2>&1; then
+    json=$(curl -s -k -m 8 "$api_url" 2>/dev/null || true)
+  elif command -v wget >/dev/null 2>&1; then
+    json=$(wget -q -T 8 -t 1 -O- "$api_url" 2>/dev/null || true)
+  fi
+  tag=$(echo "$json" | grep -o '"tag_name"[[:space:]]*:[[:space:]]*"[^"]*"' | head -n1 | sed 's/.*"tag_name"[[:space:]]*:[[:space:]]*"v\?\([^"]*\)".*/\1/' || true)
+  if [ -n "$tag" ]; then
+    echo "$tag"
+    return 0
+  fi
+
+  # 通道 4：国内镜像代理 API 降级
+  for mirror in "https://ghproxy.net/" "https://ghfast.top/"; do
+    local m_url="${mirror}${api_url}"
+    if command -v curl >/dev/null 2>&1; then
+      json=$(curl -s -k -m 8 "$m_url" 2>/dev/null || true)
+    elif command -v wget >/dev/null 2>&1; then
+      json=$(wget -q -T 8 -t 1 -O- "$m_url" 2>/dev/null || true)
+    fi
+    tag=$(echo "$json" | grep -o '"tag_name"[[:space:]]*:[[:space:]]*"[^"]*"' | head -n1 | sed 's/.*"tag_name"[[:space:]]*:[[:space:]]*"v\?\([^"]*\)".*/\1/' || true)
+    if [ -n "$tag" ]; then
+      echo "$tag"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+REMOTE_VERSION=$(get_latest_version "$GITHUB_REPO" || echo "")
 
 # 输出结果（JSON格式）
 echo "{"
@@ -3312,8 +3443,6 @@ echo "}"
 set -e
 
 GITHUB_REPO="Zephyruso/zashboard"
-GITHUB_API="https://api.github.com/repos/$GITHUB_REPO/releases/latest"
-TMP_JSON="/tmp/zashboard-check-update.json"
 UI_VERSION_FILE="/boot/config/plugins/easy-mihomo/.ui-version"
 
 # 获取本地 UI 版本
@@ -3332,12 +3461,62 @@ if [ -z "$LOCAL_UI_VERSION" ]; then
   fi
 fi
 
-# 获取远程最新版本
-REMOTE_UI_VERSION=""
-if wget -q --connect-timeout=8 --read-timeout=15 --tries=2 --waitretry=2 -O "$TMP_JSON" "$GITHUB_API" 2>/dev/null; then
-  REMOTE_UI_VERSION=$(grep -o '"tag_name"[[:space:]]*:[[:space:]]*"[^"]*"' "$TMP_JSON" | head -n1 | sed 's/.*"tag_name"[[:space:]]*:[[:space:]]*"v\?\([^"]*\)".*/\1/')
-  rm -f "$TMP_JSON"
-fi
+# 多通道高可用获取远程最新版本
+get_latest_version() {
+  local repo="$1"
+  local tag=""
+
+  # 通道 1：302 重定向 Header 解析（无 GitHub API 60次/小时限制，极速）
+  if command -v curl >/dev/null 2>&1; then
+    tag=$(curl -sIL -k -m 8 -o /dev/null -w '%{url_effective}' "https://github.com/${repo}/releases/latest" 2>/dev/null | grep -o '/tag/[^/]*$' | sed 's|/tag/||; s|^v||' || true)
+    if [ -n "$tag" ] && [ "$tag" != "latest" ]; then
+      echo "$tag"
+      return 0
+    fi
+  fi
+
+  # 通道 2：wget 抓取 Location 响应头
+  if command -v wget >/dev/null 2>&1; then
+    tag=$(wget --spider -S --timeout=8 --tries=1 "https://github.com/${repo}/releases/latest" 2>&1 | grep -i '^[[:space:]]*Location:' | head -n1 | grep -o '/tag/[^/[:space:]]*' | sed 's|/tag/||; s|^v||' || true)
+    if [ -n "$tag" ] && [ "$tag" != "latest" ]; then
+      echo "$tag"
+      return 0
+    fi
+  fi
+
+  # 通道 3：官方 GitHub API
+  local api_url="https://api.github.com/repos/${repo}/releases/latest"
+  local json=""
+  if command -v curl >/dev/null 2>&1; then
+    json=$(curl -s -k -m 8 "$api_url" 2>/dev/null || true)
+  elif command -v wget >/dev/null 2>&1; then
+    json=$(wget -q -T 8 -t 1 -O- "$api_url" 2>/dev/null || true)
+  fi
+  tag=$(echo "$json" | grep -o '"tag_name"[[:space:]]*:[[:space:]]*"[^"]*"' | head -n1 | sed 's/.*"tag_name"[[:space:]]*:[[:space:]]*"v\?\([^"]*\)".*/\1/' || true)
+  if [ -n "$tag" ]; then
+    echo "$tag"
+    return 0
+  fi
+
+  # 通道 4：国内镜像代理 API 降级
+  for mirror in "https://ghproxy.net/" "https://ghfast.top/"; do
+    local m_url="${mirror}${api_url}"
+    if command -v curl >/dev/null 2>&1; then
+      json=$(curl -s -k -m 8 "$m_url" 2>/dev/null || true)
+    elif command -v wget >/dev/null 2>&1; then
+      json=$(wget -q -T 8 -t 1 -O- "$m_url" 2>/dev/null || true)
+    fi
+    tag=$(echo "$json" | grep -o '"tag_name"[[:space:]]*:[[:space:]]*"[^"]*"' | head -n1 | sed 's/.*"tag_name"[[:space:]]*:[[:space:]]*"v\?\([^"]*\)".*/\1/' || true)
+    if [ -n "$tag" ]; then
+      echo "$tag"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+REMOTE_UI_VERSION=$(get_latest_version "$GITHUB_REPO" || echo "")
 
 # 输出 JSON 结果
 echo "{"
@@ -3373,9 +3552,7 @@ PROGRESS=0
 if [ "$1" = "--progress" ]; then PROGRESS=1; fi
 
 GITHUB_REPO="MetaCubeX/mihomo"
-GITHUB_API="https://api.github.com/repos/$GITHUB_REPO/releases/latest"
 TMP_BIN="/tmp/mihomo-latest"
-TMP_JSON="/tmp/mihomo-release.json"
 STATUS_DIR="/var/tmp/easy-mihomo-progress"
 STATUS_FILE="$STATUS_DIR/core.status"
 VERSION_FILE="/boot/config/plugins/easy-mihomo/.version"
@@ -3386,7 +3563,6 @@ mkdir -p "$STATUS_DIR"
 VARIANT="standard"
 if [ -f "$VARIANT_FILE" ]; then
   VARIANT=$(cat "$VARIANT_FILE" 2>/dev/null | tr -d '\n\r' || echo "standard")
-  # 验证有效性
   case "$VARIANT" in
     standard|compatible|v3) ;;
     *) VARIANT="standard" ;;
@@ -3402,71 +3578,81 @@ trap 'write_status "error: unexpected failure"' ERR
 
 write_status "5%: 正在获取最新版本信息..."
 
-# 获取最新 release 信息（使用分段超时）
-if ! wget -q --connect-timeout=10 --read-timeout=20 --tries=2 --waitretry=2 -O "$TMP_JSON" "$GITHUB_API"; then
-  write_status "error: 无法连接到 GitHub API，请检查网络连接或稍后重试"
-  rm -f "$TMP_JSON"
+# 多通道高可用获取远程最新版本
+get_latest_version() {
+  local repo="$1"
+  local tag=""
+  if command -v curl >/dev/null 2>&1; then
+    tag=$(curl -sIL -k -m 8 -o /dev/null -w '%{url_effective}' "https://github.com/${repo}/releases/latest" 2>/dev/null | grep -o '/tag/[^/]*$' | sed 's|/tag/||; s|^v||' || true)
+    if [ -n "$tag" ] && [ "$tag" != "latest" ]; then echo "$tag"; return 0; fi
+  fi
+  if command -v wget >/dev/null 2>&1; then
+    tag=$(wget --spider -S --timeout=8 --tries=1 "https://github.com/${repo}/releases/latest" 2>&1 | grep -i '^[[:space:]]*Location:' | head -n1 | grep -o '/tag/[^/[:space:]]*' | sed 's|/tag/||; s|^v||' || true)
+    if [ -n "$tag" ] && [ "$tag" != "latest" ]; then echo "$tag"; return 0; fi
+  fi
+  local api_url="https://api.github.com/repos/${repo}/releases/latest"
+  local json=""
+  if command -v curl >/dev/null 2>&1; then json=$(curl -s -k -m 8 "$api_url" 2>/dev/null || true); fi
+  tag=$(echo "$json" | grep -o '"tag_name"[[:space:]]*:[[:space:]]*"[^"]*"' | head -n1 | sed 's/.*"tag_name"[[:space:]]*:[[:space:]]*"v\?\([^"]*\)".*/\1/' || true)
+  if [ -n "$tag" ]; then echo "$tag"; return 0; fi
+  for mirror in "https://ghproxy.net/" "https://ghfast.top/"; do
+    if command -v curl >/dev/null 2>&1; then json=$(curl -s -k -m 8 "${mirror}${api_url}" 2>/dev/null || true); fi
+    tag=$(echo "$json" | grep -o '"tag_name"[[:space:]]*:[[:space:]]*"[^"]*"' | head -n1 | sed 's/.*"tag_name"[[:space:]]*:[[:space:]]*"v\?\([^"]*\)".*/\1/' || true)
+    if [ -n "$tag" ]; then echo "$tag"; return 0; fi
+  done
+  return 1
+}
+
+RELEASE_TAG=$(get_latest_version "$GITHUB_REPO" || echo "")
+if [ -z "$RELEASE_TAG" ]; then
+  write_status "error: 无法获取最新版本信息，请检查网络连接或稍后重试"
   exit 1
 fi
 
 write_status "10%: 解析版本信息..."
 
-# 提取版本号
-RELEASE_TAG=$(grep -o '"tag_name"[[:space:]]*:[[:space:]]*"[^"]*"' "$TMP_JSON" | head -n1 | sed 's/.*"tag_name"[[:space:]]*:[[:space:]]*"v\?\([^"]*\)".*/\1/')
-
-if [ -z "$RELEASE_TAG" ]; then
-  write_status "error: 无法解析版本信息，GitHub API 响应异常"
-  rm -f "$TMP_JSON"
-  exit 1
-fi
-
-# 根据用户选择的版本类型构建文件名模式
+# 根据用户选择的版本类型构建文件名
 case "$VARIANT" in
   compatible)
-    # 兼容版：mihomo-linux-amd64-compatible-v{版本号}.gz
-    PATTERN="mihomo-linux-amd64-compatible-v${RELEASE_TAG}\.gz"
+    FILE_NAME="mihomo-linux-amd64-compatible-v${RELEASE_TAG}.gz"
     VARIANT_NAME="兼容版"
     ;;
   v3)
-    # v3优化版：mihomo-linux-amd64-v3-v{版本号}.gz
-    PATTERN="mihomo-linux-amd64-v3-v${RELEASE_TAG}\.gz"
+    FILE_NAME="mihomo-linux-amd64-v3-v${RELEASE_TAG}.gz"
     VARIANT_NAME="v3优化版"
     ;;
   *)
-    # 标准版：mihomo-linux-amd64-v{版本号}.gz（需排除 compatible 和 v3）
-    PATTERN="mihomo-linux-amd64-v${RELEASE_TAG}\.gz"
+    FILE_NAME="mihomo-linux-amd64-v${RELEASE_TAG}.gz"
     VARIANT_NAME="标准版"
     ;;
 esac
 
-# 提取下载地址
-DOWNLOAD_URL=$(grep -o '"browser_download_url"[[:space:]]*:[[:space:]]*"[^"]*'"$PATTERN"'"' "$TMP_JSON" | head -n1 | sed 's/.*"browser_download_url"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
-
-if [ -z "$DOWNLOAD_URL" ]; then
-  write_status "error: 找不到 ${VARIANT_NAME} 的下载地址，请检查版本类型选择"
-  rm -f "$TMP_JSON"
-  exit 1
-fi
+ORIGIN_URL="https://github.com/${GITHUB_REPO}/releases/download/v${RELEASE_TAG}/${FILE_NAME}"
 
 write_status "15%: 发现最新版本 v$RELEASE_TAG (${VARIANT_NAME})"
-write_status "20%: 开始下载核心文件（约12MB，根据网速需要10-60秒）..."
+write_status "20%: 开始下载核心文件（约12MB）..."
 
-# 下载二进制文件（使用分段超时，支持慢速网络）
-# --connect-timeout=15: 连接建立超时15秒（快速发现断网）
-# --read-timeout=120: 数据传输超时120秒（允许慢速网络）
-# --tries=3: 失败后重试3次
-# --waitretry=5: 重试间隔5秒
-if ! wget -q --connect-timeout=15 --read-timeout=120 --tries=3 --waitretry=5 --show-progress -O "$TMP_BIN.gz" "$DOWNLOAD_URL" 2>&1 | while IFS= read -r line; do
-  # 尝试解析 wget 进度
-  if echo "$line" | grep -q "%"; then
-    PERCENT=$(echo "$line" | grep -o '[0-9]\+%' | head -n1 | tr -d '%')
-    if [ -n "$PERCENT" ] && [ "$PERCENT" -ge 20 ] && [ "$PERCENT" -le 80 ]; then
-      write_status "$PERCENT%: 正在下载..."
+# 多源高可用下载（直连优先，国内镜像自动降级）
+DOWNLOAD_SUCCESS=0
+URL_CANDIDATES=(
+  "$ORIGIN_URL"
+  "https://ghproxy.net/$ORIGIN_URL"
+  "https://ghfast.top/$ORIGIN_URL"
+)
+
+for URL in "${URL_CANDIDATES[@]}"; do
+  rm -f "$TMP_BIN.gz"
+  if wget -q --connect-timeout=15 --read-timeout=90 --tries=2 --waitretry=2 -O "$TMP_BIN.gz" "$URL"; then
+    if [ -s "$TMP_BIN.gz" ]; then
+      DOWNLOAD_SUCCESS=1
+      break
     fi
   fi
-done; then
-  write_status "error: 下载超时或网络中断（已尝试3次），请检查网络后点击重试"
-  rm -f "$TMP_JSON" "$TMP_BIN.gz"
+done
+
+if [ "$DOWNLOAD_SUCCESS" != "1" ]; then
+  write_status "error: 下载超时或网络中断，请检查网络后点击重试"
+  rm -f "$TMP_BIN.gz"
   exit 1
 fi
 
@@ -3477,35 +3663,34 @@ if gunzip -c "$TMP_BIN.gz" > "$TMP_BIN" 2>/dev/null; then
   chmod +x "$TMP_BIN"
 else
   write_status "error: 解压失败，文件可能损坏，请重试下载"
-  rm -f "$TMP_JSON" "$TMP_BIN.gz" "$TMP_BIN"
+  rm -f "$TMP_BIN.gz" "$TMP_BIN"
   exit 1
 fi
 
 # 验证文件完整性
 if [ ! -s "$TMP_BIN" ]; then
   write_status "error: 文件损坏或不完整，请重试下载"
-  rm -f "$TMP_JSON" "$TMP_BIN.gz" "$TMP_BIN"
+  rm -f "$TMP_BIN.gz" "$TMP_BIN"
   exit 1
 fi
 
 write_status "90%: 正在安装核心..."
 mkdir -p /boot/config/plugins/easy-mihomo
 
-# 简化策略：只保存到U盘，删除内存核心（强制下次启动同步）
+# 保存到U盘，删除内存核心
 write_status "92%: 正在保存核心到U盘..."
 cp -f "$TMP_BIN" /boot/config/plugins/easy-mihomo/mihomo
 chmod +x /boot/config/plugins/easy-mihomo/mihomo 2>/dev/null || true
 
-# 保存版本信息（版本号 + 版本类型，用于前端显示）
+# 保存版本信息
 echo "${RELEASE_TAG}|${VARIANT}" > "$VERSION_FILE"
 
-# 删除内存中的核心（无论服务是否运行）
-# 原理：下次启动时会从U盘复制最新版本，确保更新生效
+# 删除内存中的旧核心（下次启动时自动加载新版本）
 write_status "94%: 清理内存中的旧核心（下次启动将使用新版本）..."
 rm -f /usr/local/bin/mihomo
 
 write_status "96%: 清理临时文件..."
-rm -f "$TMP_BIN" "$TMP_BIN.gz" "$TMP_JSON"
+rm -f "$TMP_BIN" "$TMP_BIN.gz"
 
 write_status "100%: 核心安装完成 (v$RELEASE_TAG ${VARIANT_NAME})"
 ( sleep 2; rm -f "$STATUS_FILE" ) >/dev/null 2>&1 &
@@ -3520,8 +3705,6 @@ PROGRESS=0
 if [ "$1" = "--progress" ]; then PROGRESS=1; fi
 
 GITHUB_REPO="Zephyruso/zashboard"
-GITHUB_API="https://api.github.com/repos/$GITHUB_REPO/releases/latest"
-UI_URL="https://github.com/Zephyruso/zashboard/releases/latest/download/dist.zip"
 UI_ROOT="/boot/config/plugins/easy-mihomo"
 ZIP_PATH="$UI_ROOT/zashboard.zip"
 RAM_ROOT="/var/tmp/easy-mihomo-ui"
@@ -3530,7 +3713,6 @@ STATUS_DIR="/var/tmp/easy-mihomo-progress"
 STATUS_FILE="$STATUS_DIR/ui.status"
 TMP_DIR="/tmp/easy-mihomo-ui"
 ZIP_FILE="$TMP_DIR/dist.zip"
-TMP_JSON="$TMP_DIR/release.json"
 UI_VERSION_FILE="$UI_ROOT/.ui-version"
 
 mkdir -p "$STATUS_DIR" "$TMP_DIR" "$UI_ROOT" "$RAM_DIR"
@@ -3543,24 +3725,65 @@ write_status(){
 trap 'write_status "error: unexpected failure"' ERR
 
 write_status "5%: 正在获取 UI 版本信息..."
-# 获取版本信息（可选，失败不影响下载）
-UI_VERSION="unknown"
-if wget -q --connect-timeout=8 --read-timeout=10 --tries=2 -O "$TMP_JSON" "$GITHUB_API" 2>/dev/null; then
-  UI_VERSION=$(grep -o '"tag_name"[[:space:]]*:[[:space:]]*"[^"]*"' "$TMP_JSON" | head -n1 | sed 's/.*"tag_name"[[:space:]]*:[[:space:]]*"v\?\([^"]*\)".*/\1/' || echo "unknown")
-  rm -f "$TMP_JSON"
-fi
 
+# 多通道高可用获取远程最新版本
+get_latest_version() {
+  local repo="$1"
+  local tag=""
+  if command -v curl >/dev/null 2>&1; then
+    tag=$(curl -sIL -k -m 8 -o /dev/null -w '%{url_effective}' "https://github.com/${repo}/releases/latest" 2>/dev/null | grep -o '/tag/[^/]*$' | sed 's|/tag/||; s|^v||' || true)
+    if [ -n "$tag" ] && [ "$tag" != "latest" ]; then echo "$tag"; return 0; fi
+  fi
+  if command -v wget >/dev/null 2>&1; then
+    tag=$(wget --spider -S --timeout=8 --tries=1 "https://github.com/${repo}/releases/latest" 2>&1 | grep -i '^[[:space:]]*Location:' | head -n1 | grep -o '/tag/[^/[:space:]]*' | sed 's|/tag/||; s|^v||' || true)
+    if [ -n "$tag" ] && [ "$tag" != "latest" ]; then echo "$tag"; return 0; fi
+  fi
+  local api_url="https://api.github.com/repos/${repo}/releases/latest"
+  local json=""
+  if command -v curl >/dev/null 2>&1; then json=$(curl -s -k -m 8 "$api_url" 2>/dev/null || true); fi
+  tag=$(echo "$json" | grep -o '"tag_name"[[:space:]]*:[[:space:]]*"[^"]*"' | head -n1 | sed 's/.*"tag_name"[[:space:]]*:[[:space:]]*"v\?\([^"]*\)".*/\1/' || true)
+  if [ -n "$tag" ]; then echo "$tag"; return 0; fi
+  for mirror in "https://ghproxy.net/" "https://ghfast.top/"; do
+    if command -v curl >/dev/null 2>&1; then json=$(curl -s -k -m 8 "${mirror}${api_url}" 2>/dev/null || true); fi
+    tag=$(echo "$json" | grep -o '"tag_name"[[:space:]]*:[[:space:]]*"[^"]*"' | head -n1 | sed 's/.*"tag_name"[[:space:]]*:[[:space:]]*"v\?\([^"]*\)".*/\1/' || true)
+    if [ -n "$tag" ]; then echo "$tag"; return 0; fi
+  done
+  return 1
+}
+
+UI_VERSION=$(get_latest_version "$GITHUB_REPO" || echo "unknown")
+
+ORIGIN_UI_URL="https://github.com/${GITHUB_REPO}/releases/latest/download/dist.zip"
 write_status "10%: 正在下载 UI 包（约5MB，版本: $UI_VERSION）..."
-if ! wget -qO "$ZIP_FILE" --connect-timeout=10 --read-timeout=60 --tries=3 --waitretry=3 "$UI_URL"; then
-  write_status "error: UI 下载超时或网络中断（已尝试3次），请检查网络后重试"; rm -rf "$TMP_DIR"; exit 1
+
+# 多源高可用下载
+DOWNLOAD_SUCCESS=0
+URL_CANDIDATES=(
+  "$ORIGIN_UI_URL"
+  "https://ghproxy.net/$ORIGIN_UI_URL"
+  "https://ghfast.top/$ORIGIN_UI_URL"
+)
+
+for URL in "${URL_CANDIDATES[@]}"; do
+  rm -f "$ZIP_FILE"
+  if wget -q --connect-timeout=15 --read-timeout=60 --tries=2 --waitretry=2 -O "$ZIP_FILE" "$URL"; then
+    if [ -s "$ZIP_FILE" ]; then
+      DOWNLOAD_SUCCESS=1
+      break
+    fi
+  fi
+done
+
+if [ "$DOWNLOAD_SUCCESS" != "1" ]; then
+  write_status "error: UI 下载超时或网络中断，请检查网络后重试"
+  rm -rf "$TMP_DIR"
+  exit 1
 fi
 
 write_status "60%: 正在保存到U盘..."
-# 单次顺序写入到 U 盘，减少随机写
 mv -f "$ZIP_FILE" "$ZIP_PATH"
 
 write_status "90%: 正在解压到内存..."
-# 在内存目录中解压（覆盖现有）
 rm -rf "$RAM_DIR" && mkdir -p "$RAM_DIR"
 if command -v unzip >/dev/null 2>&1; then
   unzip -oq "$ZIP_PATH" -d "$RAM_DIR" || {
@@ -3579,6 +3802,7 @@ else
   rm -rf "$TMP_DIR"
   exit 1
 fi
+
 # 规范化：如果解压后存在 dist/ 子目录，移动其内容到根并删除 dist/
 if [ -d "$RAM_DIR/dist" ]; then
   cp -rf "$RAM_DIR/dist/." "$RAM_DIR/"
@@ -4482,6 +4706,8 @@ echo "  ✓ 临时文件已清理"
 echo "  - 清理开机启动配置..."
 sed -i "/^# BEGIN easy-mihomo (do not edit)$/,/^# END easy-mihomo$/d" /boot/config/go 2>/dev/null || true
 rm -f /boot/config/plugins/easy-mihomo/bootstart.enabled
+rm -f /boot/config/plugins/easy-mihomo/bridge_isolation.enabled
+sysctl -w net.bridge.bridge-nf-call-iptables=1 net.bridge.bridge-nf-call-ip6tables=1 net.bridge.bridge-nf-call-arptables=1 >/dev/null 2>&1 || true
 echo "  ✓ 开机启动配置已清理"
 
 # 清理定时任务
